@@ -31,7 +31,9 @@
   let currentIndex = -1;
   let state = "stopped";
   let rate = 1;
-  let voiceName = "en-US-JennyNeural";
+  let engine = "kokoro";       // "kokoro" | "edge"
+  let voiceName = "af_heart";  // Kokoro voice name
+  let edgeVoiceName = "en-US-JennyNeural"; // Edge TTS voice name
   let toolbar = null;
   let progressFill = null;
   let audioCtx = null;           // AudioContext — created on first play() (user gesture)
@@ -93,10 +95,6 @@
 
   // ── Sentence Batching ──
 
-  // Returns { text, endIndex } where text is one or more complete sentences
-  // ending at a paragraph boundary within [MIN_BATCH_WORDS, MAX_BATCH_WORDS],
-  // or at MAX_BATCH_WORDS if no paragraph boundary falls in range, or earlier
-  // if the remaining content is exhausted.
   function buildBatch(startIndex) {
     if (startIndex < 0 || startIndex >= sentences.length) return null;
 
@@ -113,21 +111,30 @@
       if (wordCount >= MAX_BATCH_WORDS) break;
 
       if (wordCount >= MIN_BATCH_WORDS) {
-        // Break at a paragraph boundary if the next sentence starts a new block.
         if (i < sentences.length && sentenceNodes[i].block !== sentenceNodes[i - 1].block) break;
       }
     }
 
-    return { text: parts.join(" "), endIndex: i - 1 };
+    // When consecutive sentences come from different block elements (e.g. a heading
+    // followed by a paragraph), ensure the first ends with sentence-ending punctuation
+    // so the TTS treats them as distinct sentences rather than running them together.
+    const joined = parts.map((part, j) => {
+      const nextIdx = startIndex + j + 1;
+      if (
+        j < parts.length - 1 &&
+        nextIdx < sentenceNodes.length &&
+        sentenceNodes[startIndex + j].block !== sentenceNodes[nextIdx].block &&
+        !/[.!?…]\s*$/.test(part)
+      ) {
+        return part + ".";
+      }
+      return part;
+    }).join(" ");
+
+    return { text: joined, endIndex: i - 1 };
   }
 
   // ── Highlighting ──
-  //
-  // We use the CSS Custom Highlight API (Chrome 105+, Firefox 119+) which
-  // highlights text via Range objects WITHOUT mutating the DOM. This means
-  // sentenceNodes references never go stale between highlights — which was
-  // the root cause of out-of-order reading and incorrect highlighting when
-  // the old surroundContents / buildSentences approach was used.
 
   (function injectHighlightStyle() {
     const id = "__read-aloud-style";
@@ -139,20 +146,13 @@
   })();
 
   const USE_CSS_HIGHLIGHTS = window.CSS && typeof CSS.highlights !== "undefined";
-
-  // Fallback overlay container for browsers without the CSS Highlight API.
   let overlayContainer = null;
-
-  function highlightSentence(index) {
-    highlightBatch(index, index);
-  }
 
   function highlightBatch(startIndex, endIndex) {
     clearHighlights();
     if (startIndex < 0 || startIndex >= sentenceNodes.length) return;
     const clampedEnd = Math.min(endIndex, sentenceNodes.length - 1);
 
-    // Build Range objects for each sentence in the batch.
     const ranges = [];
     for (let i = startIndex; i <= clampedEnd; i++) {
       const info = sentenceNodes[i];
@@ -166,11 +166,8 @@
     if (!ranges.length) return;
 
     if (USE_CSS_HIGHLIGHTS) {
-      // Zero DOM mutation — the browser paints the highlight natively.
       CSS.highlights.set("read-aloud", new Highlight(...ranges));
     } else {
-      // Fallback: absolutely-positioned overlay divs derived from client rects.
-      // Still no DOM mutation — overlays live in a separate fixed container.
       if (!overlayContainer) {
         overlayContainer = document.createElement("div");
         overlayContainer.id = "__read-aloud-overlays";
@@ -196,7 +193,6 @@
       }
     }
 
-    // Scroll the first sentence of the batch into view.
     try {
       const firstEl = sentenceNodes[startIndex].node.parentElement;
       if (firstEl) firstEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -209,7 +205,6 @@
     } else if (overlayContainer) {
       overlayContainer.innerHTML = "";
     }
-    // No DOM mutation means sentenceNodes references stay valid — no rebuild needed.
   }
 
   // ── Toolbar ──
@@ -224,6 +219,11 @@
       <button data-action="next">⏭</button>
       <div class="bar-progress"><div class="bar-fill" style="width:0%"></div></div>
       <span class="bar-index"></span>
+      <span class="bar-loading" title="Generating audio…" aria-label="Generating audio" hidden>
+        <span class="bar-loading-dot"></span>
+        <span class="bar-loading-dot"></span>
+        <span class="bar-loading-dot"></span>
+      </span>
       <button data-action="stop" class="close-btn">✕</button>
     `;
     document.documentElement.appendChild(toolbar);
@@ -246,6 +246,12 @@
     setTimeout(() => { if (toolbar) { toolbar.remove(); toolbar = null; } }, 300);
   }
 
+  function setGenerating(on) {
+    if (!toolbar) return;
+    const el = toolbar.querySelector(".bar-loading");
+    if (el) el.hidden = !on;
+  }
+
   function updateToolbar() {
     if (!toolbar) return;
     toolbar.querySelector('[data-action="toggle"]').textContent =
@@ -257,15 +263,12 @@
     }
   }
 
-  // ── Audio Playback via Edge TTS ──
+  // ── Audio Playback (both engines return an audio URL from background) ──
 
-  // AudioContext must be created during a user-gesture call (play()), then it
-  // stays unlocked for all subsequent async playback via start().
   function ensureAudioContext() {
     if (!audioCtx || audioCtx.state === "closed") {
       audioCtx = new AudioContext();
     }
-    // Resume in case the browser suspended it (tab hidden, etc.)
     if (audioCtx.state === "suspended") {
       audioCtx.resume().catch(() => {});
     }
@@ -280,10 +283,12 @@
     }
   }
 
+  function activeVoice() {
+    return engine === "edge" ? edgeVoiceName : voiceName;
+  }
+
   // Fetches and decodes audio for a batch starting at startIndex.
-  // Returns a Promise<AudioBuffer|null> and stores it in prefetchCache.
-  // Safe to call speculatively — generation checks prevent stale results
-  // from ever reaching the speaker.
+  // Returns Promise<AudioBuffer|null>, stored in prefetchCache.
   function prefetchBatch(startIndex) {
     if (prefetchCache.has(startIndex)) return prefetchCache.get(startIndex);
     if (startIndex < 0 || startIndex >= sentences.length) return Promise.resolve(null);
@@ -296,8 +301,9 @@
       try {
         response = await browser.runtime.sendMessage({
           action: "synthesize",
+          engine,
           text: batch.text,
-          voice: voiceName,
+          voice: activeVoice(),
           rate,
         });
       } catch { return null; }
@@ -325,8 +331,6 @@
     const gen = ++generation;
     stopAudio();
 
-    // Build a batch of sentences starting at currentIndex, targeting at least
-    // MIN_BATCH_WORDS words while always ending on a complete sentence.
     const batch = buildBatch(currentIndex);
     if (!batch) { stop(); return; }
 
@@ -334,15 +338,14 @@
     highlightBatch(currentIndex, batch.endIndex);
     updateToolbar();
 
-    // Await the audio for this batch — will resolve immediately if prefetched.
+    setGenerating(true);
     const audioBuffer = await prefetchBatch(currentIndex);
-    // Remove from cache now that we've consumed it.
     prefetchCache.delete(currentIndex);
+    setGenerating(false);
 
     if (gen !== generation) return;
 
     if (!audioBuffer) {
-      // Synthesis failed — skip the entire batch and try the next one.
       currentIndex = batch.endIndex + 1;
       if (currentIndex < sentences.length && state === "playing") speakCurrent();
       else stop();
@@ -355,7 +358,6 @@
     source.connect(ctx.destination);
     currentSource = source;
 
-    // Kick off prefetch of the next batch while this one plays.
     const nextBatchStart = batch.endIndex + 1;
     if (nextBatchStart < sentences.length) {
       prefetchBatch(nextBatchStart);
@@ -364,7 +366,6 @@
     source.onended = () => {
       if (gen !== generation) return;
       if (currentSource === source) currentSource = null;
-      // Advance past the entire batch that just finished.
       currentIndex = batch.endIndex + 1;
       if (currentIndex < sentences.length && state === "playing") {
         speakCurrent();
@@ -379,12 +380,13 @@
   // ── Playback Controls ──
 
   function play(options = {}) {
-    if (options.rate) rate = options.rate;
+    if (options.rate !== undefined) rate = options.rate;
     if (options.voiceName) voiceName = options.voiceName;
+    if (options.engine) engine = options.engine;
+    if (options.edgeVoiceName) edgeVoiceName = options.edgeVoiceName;
 
     if (state === "paused") { resume(); return; }
 
-    // Create/unlock the AudioContext NOW while we're in the user-gesture window.
     ensureAudioContext();
 
     buildSentences();
@@ -401,7 +403,6 @@
   function pause() {
     if (state !== "playing") return;
     state = "paused";
-    // Suspend the AudioContext so no audio plays while paused.
     if (audioCtx && audioCtx.state === "running") {
       audioCtx.suspend().catch(() => {});
     }
@@ -413,7 +414,6 @@
     if (state !== "paused") return;
     state = "playing";
     if (audioCtx && audioCtx.state === "suspended") {
-      // Resume the context — the current source node will continue from where it was.
       audioCtx.resume().then(() => {
         updateToolbar();
         broadcastState();
@@ -423,7 +423,6 @@
         broadcastState();
       });
     } else {
-      // Context was closed or not started — restart current sentence.
       speakCurrent();
       updateToolbar();
       broadcastState();
@@ -449,7 +448,6 @@
   }
 
   function nextSentence() {
-    // Jump past the entire current batch, not just one sentence.
     const nextIndex = currentBatchEndIndex >= currentIndex
       ? currentBatchEndIndex + 1
       : currentIndex + 1;
@@ -470,7 +468,6 @@
     generation++;
     stopAudio();
     browser.runtime.sendMessage({ action: "cancelSynthesis" }).catch(() => {});
-    // Step back to just before the current batch so speakCurrent re-batches from there.
     currentIndex = Math.max(0, currentIndex - 1);
     if (state === "playing" || state === "paused") {
       state = "playing";
@@ -499,7 +496,6 @@
       if (range) { clickedNode = range.startContainer; clickedOffset = range.startOffset; }
     }
 
-    // Exact text-node hit — find the sentence whose range contains the offset.
     if (clickedNode && clickedNode.nodeType === Node.TEXT_NODE) {
       for (let i = 0; i < sentenceNodes.length; i++) {
         const sn = sentenceNodes[i];
@@ -507,7 +503,6 @@
           return i;
         }
       }
-      // Same text node but between sentences — return the last one before the offset.
       let best = -1;
       for (let i = 0; i < sentenceNodes.length; i++) {
         if (sentenceNodes[i].node === clickedNode && sentenceNodes[i].start <= clickedOffset) {
@@ -517,7 +512,6 @@
       if (best !== -1) return best;
     }
 
-    // Fallback: first sentence whose text node lives inside the clicked element.
     const target = e.target;
     for (let i = 0; i < sentenceNodes.length; i++) {
       if (target.contains(sentenceNodes[i].node)) return i;
@@ -572,11 +566,19 @@
         break;
       case "setRate":
         rate = msg.rate;
-        prefetchCache.clear(); // stale audio encoded at old rate
+        prefetchCache.clear();
         break;
       case "setVoice":
         voiceName = msg.voiceName;
-        prefetchCache.clear(); // stale audio for old voice
+        prefetchCache.clear();
+        break;
+      case "setEdgeVoice":
+        edgeVoiceName = msg.edgeVoiceName;
+        prefetchCache.clear();
+        break;
+      case "setEngine":
+        engine = msg.engine;
+        prefetchCache.clear();
         break;
       case "getState":
         sendResponse(state);

@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Read Aloud",
-  "version": "2.0.0",
-  "description": "Read webpage text aloud using high-quality Microsoft Neural voices with sentence highlighting.",
+  "version": "4.0.0",
+  "description": "Read webpage text aloud using Edge TTS or a local Kokoro service, with sentence highlighting.",
   "icons": {
     "48": "icons/icon-48.svg",
     "96": "icons/icon-96.svg"
@@ -12,8 +12,11 @@
     "storage",
     "webRequest",
     "webRequestBlocking",
-    "*://speech.platform.bing.com/*"
+    "*://speech.platform.bing.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
+  "content_security_policy": "script-src 'self'; object-src 'self'",
   "browser_action": {
     "default_icon": "icons/icon-48.svg",
     "default_popup": "popup/popup.html",
@@ -27,6 +30,6 @@
     }
   ],
   "background": {
-    "scripts": ["background/tts.js", "background/background.js"]
+    "page": "background/background.html"
   }
 }

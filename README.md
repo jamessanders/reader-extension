@@ -1,15 +1,21 @@
 # Read Aloud — Firefox Extension
 
-A Firefox extension that reads webpage text aloud with sentence-by-sentence highlighting, adjustable speed, and voice selection — similar to Microsoft Edge's Read Aloud feature.
+A Firefox extension that reads webpage text aloud with sentence-by-sentence highlighting, adjustable speed, and voice selection — powered by **Kokoro**, an on-device 82M-parameter neural TTS model that runs entirely in your browser.
 
 ## Features
 
-- **Text-to-Speech** using the browser's built-in Web Speech API
+- **On-device TTS** using [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) — text never leaves your device
+- **10 high-quality neural voices** — American and British, male and female
 - **Sentence highlighting** — the current sentence is highlighted and scrolled into view
 - **Floating toolbar** on the page with play/pause, skip, progress bar, and stop
 - **Popup controls** — play/pause, previous/next sentence, speed slider (0.5×–3×), voice picker
 - **Smart text extraction** — skips nav, footer, scripts, hidden elements; prefers `<article>` or `[role="main"]` content
 - **Persisted settings** — speed and voice selection are remembered across sessions
+- **Model download progress** — a progress bar in the popup shows the one-time ~86 MB model download
+
+## First-Run Note
+
+On first use, Kokoro downloads its quantized model weights (~86 MB) from Hugging Face. This is a one-time download — the browser caches it and subsequent uses start instantly. A download progress bar appears in the popup while this happens.
 
 ## Installation (Temporary / Development)
 
@@ -34,17 +40,33 @@ A Firefox extension that reads webpage text aloud with sentence-by-sentence high
 
 ```
 read-extension/
-├── manifest.json          # Extension manifest (Manifest V2)
+├── manifest.json              # Extension manifest (Manifest V2)
 ├── background/
-│   └── background.js      # Relays state between content ↔ popup
+│   ├── background.html        # Background page (loads main.js as an ES module)
+│   └── main.js                # Kokoro TTS engine + message handler
 ├── content/
-│   ├── reader.js          # Core: text extraction, TTS, highlighting
-│   └── reader.css         # Highlight + toolbar styles
+│   ├── reader.js              # Core: text extraction, audio playback, highlighting
+│   └── reader.css             # Highlight + toolbar styles
 ├── popup/
-│   ├── popup.html         # Popup UI
-│   ├── popup.css          # Popup styles
-│   └── popup.js           # Popup logic
+│   ├── popup.html             # Popup UI
+│   ├── popup.css              # Popup styles
+│   └── popup.js               # Popup logic
 └── icons/
     ├── icon-48.svg
     └── icon-96.svg
 ```
+
+## Voices
+
+| Voice | Accent | Gender | Quality |
+|---|---|---|---|
+| Heart | American | Female | ★★★ |
+| Bella | American | Female | ★★★ |
+| Nicole | American | Female | ★★ |
+| Emma | British | Female | ★★ |
+| Fenrir | American | Male | ★★ |
+| Michael | American | Male | ★★ |
+| Puck | American | Male | ★★ |
+| Isabella | British | Female | ★ |
+| George | British | Male | ★ |
+| Fable | British | Male | ★ |

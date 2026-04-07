@@ -28,6 +28,14 @@
     </div>
 
     <div class="setting">
+      <label for="engine">Engine</label>
+      <select id="engine">
+        <option value="kokoro">Kokoro (local service)</option>
+        <option value="edge">Edge TTS (built-in)</option>
+      </select>
+    </div>
+
+    <div class="setting">
       <label for="speed">Speed</label>
       <div class="range-row">
         <input type="range" id="speed" min="0.5" max="3" step="0.25" value="1">
@@ -35,9 +43,23 @@
       </div>
     </div>
 
-    <div class="setting">
-      <label for="voice">Voice</label>
-      <select id="voice"></select>
+    <div class="setting kokoro-only" id="kokoro-voice-setting">
+      <label for="kokoro-voice">Voice</label>
+      <select id="kokoro-voice"></select>
+    </div>
+
+    <div class="setting edge-only hidden" id="edge-voice-setting">
+      <label for="edge-voice">Voice</label>
+      <select id="edge-voice"></select>
+    </div>
+
+    <div class="setting kokoro-only" id="service-url-setting">
+      <label for="service-url">Service URL</label>
+      <div class="service-row">
+        <input type="text" id="service-url" placeholder="http://localhost:5423" spellcheck="false">
+        <span id="service-dot" class="service-dot" title="Service status"></span>
+      </div>
+      <span id="service-hint" class="service-hint">Checking…</span>
     </div>
   </div>
   <script src="popup.js"></script>

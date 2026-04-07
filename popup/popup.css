@@ -173,3 +173,98 @@ select {
 select:focus {
   border-color: #6366f1;
 }
+
+input[type="text"] {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #2d2d4a;
+  background: #16162a;
+  color: #e0e0ec;
+  font-size: 13px;
+  outline: none;
+  min-width: 0;
+}
+
+input[type="text"]:focus {
+  border-color: #6366f1;
+}
+
+input[type="text"]::placeholder {
+  color: #55556a;
+}
+
+.service-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3d3d5c;
+  transition: background 0.2s;
+}
+
+.service-dot.ok       { background: #4ade80; }
+.service-dot.warming  { background: #facc15; }
+.service-dot.error    { background: #f87171; }
+.service-dot.checking { background: #3d3d5c; animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.service-hint {
+  font-size: 11px;
+  color: #55556a;
+}
+
+.model-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #16162a;
+  border-radius: 8px;
+  border: 1px solid #2d2d4a;
+}
+
+.model-status.error {
+  border-color: #7f1d1d;
+  background: #1a0a0a;
+}
+
+.model-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.model-status-row span {
+  font-size: 11px;
+  color: #8888aa;
+}
+
+#model-status-pct {
+  font-variant-numeric: tabular-nums;
+}
+
+.model-progress-bar {
+  height: 3px;
+  background: #2d2d4a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.model-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #6366f1;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
