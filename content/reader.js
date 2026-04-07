@@ -11,7 +11,9 @@
   ]);
 
   const MIN_BATCH_WORDS = 10;
-  const MAX_BATCH_WORDS = 200;
+  const MAX_BATCH_WORDS = 25;
+  const MAX_BATCH_CHARS = 650;
+  const HARD_MAX_CHARS = 1200;
 
   const BLOCK_TAGS = new Set([
     "P", "DIV", "ARTICLE", "SECTION", "BLOCKQUOTE",
@@ -24,6 +26,10 @@
     let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
     while (el && !BLOCK_TAGS.has(el.tagName)) el = el.parentElement;
     return el || node.parentElement;
+  }
+
+  function hasSentenceEndingPunctuation(text) {
+    return /[.!?…]["'»\])]*\s*$/.test((text || "").trim());
   }
 
   let sentences = [];
@@ -100,18 +106,41 @@
 
     const parts = [];
     let wordCount = 0;
+    let charCount = 0;
     let i = startIndex;
 
     while (i < sentences.length) {
       const sentence = sentences[i];
+      const sentenceChars = sentence.length;
+      const separatorChars = parts.length ? 1 : 0; // " " between joined sentences
+      const projectedChars = charCount + separatorChars + sentenceChars;
+
+      // Keep requests bounded in length to avoid upstream TTS truncation.
+      if (
+        parts.length &&
+        projectedChars > MAX_BATCH_CHARS &&
+        hasSentenceEndingPunctuation(parts[parts.length - 1])
+      ) {
+        break;
+      }
+
       parts.push(sentence);
       wordCount += sentence.trim().split(/\s+/).length;
+      charCount = projectedChars;
       i++;
 
-      if (wordCount >= MAX_BATCH_WORDS) break;
+      if (charCount >= HARD_MAX_CHARS) break;
+
+      if (wordCount >= MAX_BATCH_WORDS && hasSentenceEndingPunctuation(sentence)) break;
 
       if (wordCount >= MIN_BATCH_WORDS) {
-        if (i < sentences.length && sentenceNodes[i].block !== sentenceNodes[i - 1].block) break;
+        if (
+          i < sentences.length &&
+          sentenceNodes[i].block !== sentenceNodes[i - 1].block &&
+          hasSentenceEndingPunctuation(sentence)
+        ) {
+          break;
+        }
       }
     }
 
