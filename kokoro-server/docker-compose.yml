@@ -1,0 +1,11 @@
+services:
+  kokoro-server:
+    build: .
+    ports:
+      - "${PORT:-5423}:5423"
+    volumes:
+      - kokoro-cache:/app/cache
+    restart: unless-stopped
+
+volumes:
+  kokoro-cache:

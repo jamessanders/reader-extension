@@ -6,9 +6,27 @@ Running the model here instead of inside the browser tab eliminates tab memory p
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) v18 or newer
+- [Node.js](https://nodejs.org) v18 or newer, **or**
+- [Docker](https://docs.docker.com/get-docker/) (no Node.js required)
 
 ## Setup
+
+### Docker (recommended)
+
+```bash
+cd kokoro-server
+docker compose up -d
+```
+
+The model (~86 MB) is downloaded on first start and stored in a named Docker volume (`kokoro-cache`), so subsequent starts are fast. Stream logs with:
+
+```bash
+docker compose logs -f
+```
+
+Stop the service with `docker compose down` (the model cache volume is preserved).
+
+### Node.js
 
 ```bash
 cd kokoro-server
@@ -35,7 +53,11 @@ The dot indicator in the popup turns green when the service is reachable and the
 | `PORT` | `5423` | Port the server listens on |
 
 ```bash
+# Node.js
 PORT=8080 npm start
+
+# Docker Compose — the host port follows PORT
+PORT=8080 docker compose up -d
 ```
 
 ## API
