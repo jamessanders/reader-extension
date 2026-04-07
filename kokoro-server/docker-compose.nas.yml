@@ -1,0 +1,11 @@
+services:
+  kokoro-server:
+    image: ghcr.io/jamessanders/kokoro-server:latest
+    ports:
+      - "${PORT:-5423}:5423"
+    volumes:
+      - kokoro-cache:/app/cache
+    restart: unless-stopped
+
+volumes:
+  kokoro-cache:

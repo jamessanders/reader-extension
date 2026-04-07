@@ -11,7 +11,7 @@ Running the model here instead of inside the browser tab eliminates tab memory p
 
 ## Setup
 
-### Docker (recommended)
+### Docker — local machine (recommended)
 
 ```bash
 cd kokoro-server
@@ -25,6 +25,38 @@ docker compose logs -f
 ```
 
 Stop the service with `docker compose down` (the model cache volume is preserved).
+
+### Docker — UGREEN NAS (or any remote host)
+
+A pre-built multi-arch image (`linux/amd64` + `linux/arm64`) is published automatically to GitHub Container Registry on every push to `main`.
+
+1. SSH into your NAS (or use the NAS file manager to upload the file):
+
+```bash
+ssh your-nas
+mkdir -p ~/kokoro-server && cd ~/kokoro-server
+```
+
+2. Download the compose file:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jamessanders/reader-extension/main/kokoro-server/docker-compose.nas.yml \
+  -o docker-compose.yml
+```
+
+3. Start the service:
+
+```bash
+docker compose up -d
+```
+
+The image is pulled automatically — no source code or Node.js needed on the NAS. The Kokoro model is cached in a named Docker volume and survives container updates.
+
+To update to the latest image:
+
+```bash
+docker compose pull && docker compose up -d
+```
 
 ### Node.js
 
