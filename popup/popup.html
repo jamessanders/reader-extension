@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Read Aloud</h1>
+      <span class="status" id="status">Stopped</span>
+    </header>
+
+    <div class="controls">
+      <button id="btn-back" class="icon-btn" title="Previous sentence">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+      <button id="btn-play" class="icon-btn primary" title="Play / Pause">
+        <svg viewBox="0 0 24 24" id="icon-play"><polygon points="5,3 19,12 5,21"/></svg>
+        <svg viewBox="0 0 24 24" id="icon-pause" class="hidden"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>
+      </button>
+      <button id="btn-forward" class="icon-btn" title="Next sentence">
+        <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zm-10 6 8.5 6V6z" transform="scale(-1,1) translate(-24,0)"/></svg>
+      </button>
+      <button id="btn-stop" class="icon-btn" title="Stop">
+        <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+      </button>
+    </div>
+
+    <div class="setting">
+      <label for="speed">Speed</label>
+      <div class="range-row">
+        <input type="range" id="speed" min="0.5" max="3" step="0.25" value="1">
+        <span id="speed-val">1×</span>
+      </div>
+    </div>
+
+    <div class="setting">
+      <label for="voice">Voice</label>
+      <select id="voice"></select>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

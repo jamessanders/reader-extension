@@ -1,0 +1,32 @@
+{
+  "manifest_version": 2,
+  "name": "Read Aloud",
+  "version": "2.0.0",
+  "description": "Read webpage text aloud using high-quality Microsoft Neural voices with sentence highlighting.",
+  "icons": {
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "*://speech.platform.bing.com/*"
+  ],
+  "browser_action": {
+    "default_icon": "icons/icon-48.svg",
+    "default_popup": "popup/popup.html",
+    "default_title": "Read Aloud"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/reader.js"],
+      "css": ["content/reader.css"]
+    }
+  ],
+  "background": {
+    "scripts": ["background/tts.js", "background/background.js"]
+  }
+}
