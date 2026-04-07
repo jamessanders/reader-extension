@@ -10,7 +10,21 @@
     "SELECT", "BUTTON", "NAV", "FOOTER", "HEADER",
   ]);
 
-  const MIN_BATCH_WORDS = 200;
+  const MIN_BATCH_WORDS = 10;
+  const MAX_BATCH_WORDS = 300;
+
+  const BLOCK_TAGS = new Set([
+    "P", "DIV", "ARTICLE", "SECTION", "BLOCKQUOTE",
+    "H1", "H2", "H3", "H4", "H5", "H6",
+    "LI", "DT", "DD", "FIGCAPTION", "DETAILS", "SUMMARY",
+    "PRE", "TABLE", "TR", "TD", "TH",
+  ]);
+
+  function nearestBlock(node) {
+    let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    while (el && !BLOCK_TAGS.has(el.tagName)) el = el.parentElement;
+    return el || node.parentElement;
+  }
 
   let sentences = [];
   let sentenceNodes = [];
@@ -72,7 +86,7 @@
         const s = m[0].trim();
         if (s.length < 2) continue;
         sentences.push(s);
-        sentenceNodes.push({ node, start: m.index, end: m.index + m[0].length });
+        sentenceNodes.push({ node, start: m.index, end: m.index + m[0].length, block: nearestBlock(node) });
       }
     }
   }
@@ -80,8 +94,9 @@
   // ── Sentence Batching ──
 
   // Returns { text, endIndex } where text is one or more complete sentences
-  // totalling at least MIN_BATCH_WORDS words (unless the remaining sentences
-  // are fewer), and endIndex is the index of the last sentence included.
+  // ending at a paragraph boundary within [MIN_BATCH_WORDS, MAX_BATCH_WORDS],
+  // or at MAX_BATCH_WORDS if no paragraph boundary falls in range, or earlier
+  // if the remaining content is exhausted.
   function buildBatch(startIndex) {
     if (startIndex < 0 || startIndex >= sentences.length) return null;
 
@@ -94,7 +109,13 @@
       parts.push(sentence);
       wordCount += sentence.trim().split(/\s+/).length;
       i++;
-      if (wordCount >= MIN_BATCH_WORDS) break;
+
+      if (wordCount >= MAX_BATCH_WORDS) break;
+
+      if (wordCount >= MIN_BATCH_WORDS) {
+        // Break at a paragraph boundary if the next sentence starts a new block.
+        if (i < sentences.length && sentenceNodes[i].block !== sentenceNodes[i - 1].block) break;
+      }
     }
 
     return { text: parts.join(" "), endIndex: i - 1 };
