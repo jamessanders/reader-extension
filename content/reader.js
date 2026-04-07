@@ -11,7 +11,7 @@
   ]);
 
   const MIN_BATCH_WORDS = 10;
-  const MAX_BATCH_WORDS = 300;
+  const MAX_BATCH_WORDS = 200;
 
   const BLOCK_TAGS = new Set([
     "P", "DIV", "ARTICLE", "SECTION", "BLOCKQUOTE",
@@ -143,7 +143,7 @@
     style.id = id;
     const dark = isPageDark();
     style.textContent = dark
-      ? "::highlight(read-aloud) { background-color: rgba(99,102,241,0.45); color: #fff; }"
+      ? "::highlight(read-aloud) { background-color: rgba(99,102,241,0.45); color: inherit; }"
       : "::highlight(read-aloud) { background-color: #ffe066; color: #111; }";
     (document.head || document.documentElement).appendChild(style);
   })();

@@ -1,13 +1,13 @@
 # Kokoro TTS Service
 
-A lightweight local HTTP server that runs the [Kokoro](https://github.com/hexgrad/kokoro) neural TTS model and exposes it as a REST API for the Read Aloud browser extension.
+A lightweight local HTTP server that runs the [Kokoro](https://github.com/hexgrad/kokoro) neural TTS model via [kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) and exposes it as a REST API for the Read Aloud browser extension.
 
-Running the model here instead of inside the browser tab eliminates tab memory pressure and produces significantly faster synthesis times.
+Running the model here instead of inside the browser tab eliminates tab memory pressure and produces significantly faster synthesis times. The Python + ONNX runtime stack is meaningfully faster than the previous Node.js/transformers.js setup, particularly on Apple Silicon where the CoreML execution provider is available.
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) v18 or newer, **or**
-- [Docker](https://docs.docker.com/get-docker/) (no Node.js required)
+- [Docker](https://docs.docker.com/get-docker/) (recommended), **or**
+- Python 3.10+
 
 ## Setup
 
@@ -18,7 +18,7 @@ cd kokoro-server
 docker compose up -d
 ```
 
-The model (~86 MB) is downloaded on first start and stored in a named Docker volume (`kokoro-cache`), so subsequent starts are fast. Stream logs with:
+The model (~88 MB int8) is downloaded on first start and stored in a named Docker volume (`kokoro-cache`), so subsequent starts are fast. Stream logs with:
 
 ```bash
 docker compose logs -f
@@ -50,7 +50,7 @@ curl -fsSL https://raw.githubusercontent.com/jamessanders/reader-extension/main/
 docker compose up -d
 ```
 
-The image is pulled automatically — no source code or Node.js needed on the NAS. The Kokoro model is cached in a named Docker volume and survives container updates.
+The image is pulled automatically — no source code or Python needed on the NAS. The Kokoro model is cached in a named Docker volume and survives container updates.
 
 To update to the latest image:
 
@@ -58,15 +58,15 @@ To update to the latest image:
 docker compose pull && docker compose up -d
 ```
 
-### Node.js
+### Python (local)
 
 ```bash
 cd kokoro-server
-npm install
-npm start
+pip install -r requirements.txt
+python server.py
 ```
 
-On first run the Kokoro ONNX model (~86 MB) is downloaded and cached automatically by `kokoro-js`. Subsequent starts load from the cache and are ready in seconds.
+On first run the model files (~88 MB) are downloaded automatically from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0) and cached in `./cache`. Subsequent starts load from cache.
 
 ## Usage
 
@@ -83,13 +83,24 @@ The dot indicator in the popup turns green when the service is reachable and the
 | Environment variable | Default | Description |
 |---|---|---|
 | `PORT` | `5423` | Port the server listens on |
+| `CACHE_DIR` | `/app/cache` | Directory for model file cache |
+| `MODEL_VARIANT` | `int8` | Model precision: `int8` (~88 MB), `fp16` (~169 MB), `f32` (~310 MB) |
+| `ONNX_PROVIDER` | _(auto)_ | Force an ONNX execution provider, e.g. `CoreMLExecutionProvider` on macOS |
 
 ```bash
-# Node.js
-PORT=8080 npm start
+# Python
+PORT=8080 python server.py
 
 # Docker Compose — the host port follows PORT
 PORT=8080 docker compose up -d
+```
+
+### Apple Silicon (M1/M2/M3)
+
+For maximum performance on Apple Silicon, set the CoreML execution provider:
+
+```bash
+ONNX_PROVIDER=CoreMLExecutionProvider python server.py
 ```
 
 ## API
@@ -114,7 +125,7 @@ Synthesize speech and return a WAV audio file.
 |---|---|---|---|
 | `text` | string | — | Text to synthesize (required) |
 | `voice` | string | `af_heart` | Kokoro voice name |
-| `speed` | number | `1.0` | Playback speed multiplier |
+| `speed` | number | `1.0` | Playback speed multiplier (0.5–2.0) |
 
 **Available voices (English):**
 

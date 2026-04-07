@@ -1,17 +1,20 @@
-FROM node:20-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install dependencies first (layer-cached unless package files change)
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# phonemizer-fork links against libespeak-ng at runtime
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libespeak-ng1 \
+ && rm -rf /var/lib/apt/lists/*
 
-COPY server.js ./
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Store HuggingFace model cache in a predictable path so it can be
-# volume-mounted and survive container restarts.
-ENV HF_HOME=/app/cache
+COPY server.py .
+
+ENV CACHE_DIR=/app/cache
+ENV PORT=5423
 
 EXPOSE 5423
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "python -m uvicorn server:app --host 0.0.0.0 --port ${PORT:-5423}"]
