@@ -141,12 +141,23 @@
     if (document.getElementById(id)) return;
     const style = document.createElement("style");
     style.id = id;
-    style.textContent = "::highlight(read-aloud) { background-color: #ffe066; color: inherit; }";
+    const dark = isPageDark();
+    style.textContent = dark
+      ? "::highlight(read-aloud) { background-color: rgba(99,102,241,0.45); color: #fff; }"
+      : "::highlight(read-aloud) { background-color: #ffe066; color: #111; }";
     (document.head || document.documentElement).appendChild(style);
   })();
 
   const USE_CSS_HIGHLIGHTS = window.CSS && typeof CSS.highlights !== "undefined";
   let overlayContainer = null;
+
+  function isPageDark() {
+    const bg = getComputedStyle(document.documentElement).backgroundColor;
+    const m = bg.match(/\d+\.?\d*/g);
+    if (!m || m.length < 3) return false;
+    const [r, g, b] = m.map(Number);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
+  }
 
   function highlightBatch(startIndex, endIndex) {
     clearHighlights();
@@ -178,6 +189,9 @@
         });
         document.documentElement.appendChild(overlayContainer);
       }
+      const dark = isPageDark();
+      const overlayColor = dark ? "rgba(99, 102, 241, 0.45)" : "rgba(255, 224, 102, 0.5)";
+      const overlayMix = dark ? "normal" : "multiply";
       for (const range of ranges) {
         for (const rect of range.getClientRects()) {
           const div = document.createElement("div");
@@ -185,7 +199,8 @@
             position: "fixed",
             top: rect.top + "px", left: rect.left + "px",
             width: rect.width + "px", height: rect.height + "px",
-            background: "rgba(255, 224, 102, 0.5)",
+            background: overlayColor,
+            mixBlendMode: overlayMix,
             pointerEvents: "none",
           });
           overlayContainer.appendChild(div);
