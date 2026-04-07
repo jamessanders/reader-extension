@@ -84,20 +84,28 @@ Synthesize speech and return a WAV audio file.
 | `voice` | string | `af_heart` | Kokoro voice name |
 | `speed` | number | `1.0` | Playback speed multiplier |
 
-**Available voices:**
+**Available voices (English):**
+
+Grades from [VOICES.md](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md) — ★★★★★ A/A- · ★★★★ B- · ★★★ C+ · ★★ C/C- · ★ D+/D/D-/F+
 
 | Name | Description |
 |---|---|
-| `af_heart` | Heart — US Female ★★★ |
-| `af_bella` | Bella — US Female ★★★ |
-| `af_nicole` | Nicole — US Female ★★ |
-| `bf_emma` | Emma — UK Female ★★ |
-| `am_fenrir` | Fenrir — US Male ★★ |
-| `am_michael` | Michael — US Male ★★ |
-| `am_puck` | Puck — US Male ★★ |
-| `bf_isabella` | Isabella — UK Female ★ |
-| `bm_george` | George — UK Male ★ |
-| `bm_fable` | Fable — UK Male ★ |
+| `af_heart` | Heart — US Female ★★★★★ |
+| `af_bella` | Bella — US Female ★★★★★ |
+| `af_nicole` | Nicole — US Female ★★★★ |
+| `bf_emma` | Emma — UK Female ★★★★ |
+| `af_aoede` | Aoede — US Female ★★★ |
+| `af_kore` | Kore — US Female ★★★ |
+| `af_sarah` | Sarah — US Female ★★★ |
+| `am_fenrir` | Fenrir — US Male ★★★ |
+| `am_michael` | Michael — US Male ★★★ |
+| `am_puck` | Puck — US Male ★★★ |
+| `af_alloy` | Alloy — US Female ★★ |
+| `af_nova` | Nova — US Female ★★ |
+| `af_sky` | Sky — US Female ★★ |
+| `bf_isabella` | Isabella — UK Female ★★ |
+| `bm_fable` | Fable — UK Male ★★ |
+| `bm_george` | George — UK Male ★★ |
 
 **Response:** `audio/wav` binary
 

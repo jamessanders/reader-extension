@@ -1,42 +1,41 @@
 (function () {
   // Kokoro voices ordered by quality grade (A → F).
   // Grades from: https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
+  // Star mapping: A/A- → ★★★★★  B- → ★★★★  C+ → ★★★  C/C- → ★★  D+/D/D-/F+ → ★
   const KOKORO_VOICES = [
     // Grade A / A-
-    { name: "af_heart",    label: "Heart (US, Female) ★★★" },
-    { name: "af_bella",    label: "Bella (US, Female) ★★★" },
+    { name: "af_heart",    label: "Heart (US, Female) ★★★★★" },
+    { name: "af_bella",    label: "Bella (US, Female) ★★★★★" },
     // Grade B-
-    { name: "af_nicole",   label: "Nicole (US, Female) ★★" },
-    { name: "bf_emma",     label: "Emma (UK, Female) ★★" },
+    { name: "af_nicole",   label: "Nicole (US, Female) ★★★★" },
+    { name: "bf_emma",     label: "Emma (UK, Female) ★★★★" },
     // Grade C+
-    { name: "af_aoede",    label: "Aoede (US, Female) ★★" },
-    { name: "af_kore",     label: "Kore (US, Female) ★★" },
-    { name: "af_sarah",    label: "Sarah (US, Female) ★★" },
-    { name: "am_fenrir",   label: "Fenrir (US, Male) ★★" },
-    { name: "am_michael",  label: "Michael (US, Male) ★★" },
-    { name: "am_puck",     label: "Puck (US, Male) ★★" },
+    { name: "af_aoede",    label: "Aoede (US, Female) ★★★" },
+    { name: "af_kore",     label: "Kore (US, Female) ★★★" },
+    { name: "af_sarah",    label: "Sarah (US, Female) ★★★" },
+    { name: "am_fenrir",   label: "Fenrir (US, Male) ★★★" },
+    { name: "am_michael",  label: "Michael (US, Male) ★★★" },
+    { name: "am_puck",     label: "Puck (US, Male) ★★★" },
     // Grade C / C-
-    { name: "af_alloy",    label: "Alloy (US, Female) ★" },
-    { name: "af_nova",     label: "Nova (US, Female) ★" },
-    { name: "af_sky",      label: "Sky (US, Female) ★" },
-    { name: "bf_isabella", label: "Isabella (UK, Female) ★" },
-    { name: "bm_fable",    label: "Fable (UK, Male) ★" },
-    { name: "bm_george",   label: "George (UK, Male) ★" },
-    // Grade D+
+    { name: "af_alloy",    label: "Alloy (US, Female) ★★" },
+    { name: "af_nova",     label: "Nova (US, Female) ★★" },
+    { name: "af_sky",      label: "Sky (US, Female) ★★" },
+    { name: "bf_isabella", label: "Isabella (UK, Female) ★★" },
+    { name: "bm_fable",    label: "Fable (UK, Male) ★★" },
+    { name: "bm_george",   label: "George (UK, Male) ★★" },
+    // Grade D+ / D / D- / F+
     { name: "bm_lewis",    label: "Lewis (UK, Male) ★" },
-    // Grade D
-    { name: "af_jessica",  label: "Jessica (US, Female)" },
-    { name: "af_river",    label: "River (US, Female)" },
-    { name: "am_echo",     label: "Echo (US, Male)" },
-    { name: "am_eric",     label: "Eric (US, Male)" },
-    { name: "am_liam",     label: "Liam (US, Male)" },
-    { name: "am_onyx",     label: "Onyx (US, Male)" },
-    { name: "bf_alice",    label: "Alice (UK, Female)" },
-    { name: "bf_lily",     label: "Lily (UK, Female)" },
-    { name: "bm_daniel",   label: "Daniel (UK, Male)" },
-    // Grade D- / F+
-    { name: "am_santa",    label: "Santa (US, Male)" },
-    { name: "am_adam",     label: "Adam (US, Male)" },
+    { name: "af_jessica",  label: "Jessica (US, Female) ★" },
+    { name: "af_river",    label: "River (US, Female) ★" },
+    { name: "am_echo",     label: "Echo (US, Male) ★" },
+    { name: "am_eric",     label: "Eric (US, Male) ★" },
+    { name: "am_liam",     label: "Liam (US, Male) ★" },
+    { name: "am_onyx",     label: "Onyx (US, Male) ★" },
+    { name: "bf_alice",    label: "Alice (UK, Female) ★" },
+    { name: "bf_lily",     label: "Lily (UK, Female) ★" },
+    { name: "bm_daniel",   label: "Daniel (UK, Male) ★" },
+    { name: "am_santa",    label: "Santa (US, Male) ★" },
+    { name: "am_adam",     label: "Adam (US, Male) ★" },
   ];
 
   // Microsoft Edge neural voices via the Read Aloud WebSocket API.
