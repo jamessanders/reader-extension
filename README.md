@@ -36,6 +36,42 @@ On first use, Kokoro downloads its quantized model weights (~86 MB) from Hugging
    - **Adjust speed** with the slider
    - **Change voice** from the dropdown
 
+## Kokoro Server (optional — better performance)
+
+The extension can offload TTS to a local **kokoro-server** instead of running the model in the browser tab. This eliminates tab memory pressure and produces noticeably faster synthesis.
+
+### Run on your machine
+
+```bash
+cd kokoro-server
+docker compose up -d
+```
+
+Then set the **Service URL** in the extension popup to `http://localhost:5423`.
+
+### Deploy on a UGREEN NAS (or any remote host)
+
+A pre-built multi-arch image (`linux/amd64` + `linux/arm64`) is published automatically to GitHub Container Registry on every push to `main`.
+
+SSH into your NAS and run:
+
+```bash
+mkdir -p ~/kokoro-server && cd ~/kokoro-server
+curl -fsSL https://raw.githubusercontent.com/jamessanders/reader-extension/main/kokoro-server/docker-compose.nas.yml \
+  -o docker-compose.yml
+docker compose up -d
+```
+
+No source code or Node.js needed on the NAS. The Kokoro model (~86 MB) is cached in a Docker volume and survives restarts. To update:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Then point the extension popup's **Service URL** to `http://<nas-ip>:5423`.
+
+See [`kokoro-server/README.md`](kokoro-server/README.md) for full API docs and configuration options.
+
 ## Project Structure
 
 ```
@@ -51,6 +87,11 @@ read-extension/
 │   ├── popup.html             # Popup UI
 │   ├── popup.css              # Popup styles
 │   └── popup.js               # Popup logic
+├── kokoro-server/
+│   ├── server.js              # Express TTS service (optional local/NAS backend)
+│   ├── Dockerfile
+│   ├── docker-compose.yml     # Local dev
+│   └── docker-compose.nas.yml # NAS / remote host (pulls pre-built image)
 └── icons/
     ├── icon-48.svg
     └── icon-96.svg
@@ -58,15 +99,23 @@ read-extension/
 
 ## Voices
 
+Grades from [VOICES.md](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md) — ★★★★★ A/A- · ★★★★ B- · ★★★ C+ · ★★ C/C- · ★ D+/D/D-/F+
+
 | Voice | Accent | Gender | Quality |
 |---|---|---|---|
-| Heart | American | Female | ★★★ |
-| Bella | American | Female | ★★★ |
-| Nicole | American | Female | ★★ |
-| Emma | British | Female | ★★ |
-| Fenrir | American | Male | ★★ |
-| Michael | American | Male | ★★ |
-| Puck | American | Male | ★★ |
-| Isabella | British | Female | ★ |
-| George | British | Male | ★ |
-| Fable | British | Male | ★ |
+| Heart | American | Female | ★★★★★ |
+| Bella | American | Female | ★★★★★ |
+| Nicole | American | Female | ★★★★ |
+| Emma | British | Female | ★★★★ |
+| Aoede | American | Female | ★★★ |
+| Kore | American | Female | ★★★ |
+| Sarah | American | Female | ★★★ |
+| Fenrir | American | Male | ★★★ |
+| Michael | American | Male | ★★★ |
+| Puck | American | Male | ★★★ |
+| Alloy | American | Female | ★★ |
+| Nova | American | Female | ★★ |
+| Sky | American | Female | ★★ |
+| Isabella | British | Female | ★★ |
+| Fable | British | Male | ★★ |
+| George | British | Male | ★★ |
