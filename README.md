@@ -36,6 +36,18 @@ On first use, Kokoro downloads its quantized model weights (~86 MB) from Hugging
    - **Adjust speed** with the slider
    - **Change voice** from the dropdown
 
+## Quick start — both servers
+
+To start the Kokoro TTS server and the Gemma LLM server together:
+
+```bash
+bash start.sh
+```
+
+This launches both in the background and streams their logs to the terminal.
+Press **Ctrl+C** to stop both. Environment variables (`HF_TOKEN`, `MODEL_FILE`, etc.)
+are forwarded to each sub-server as usual.
+
 ## Kokoro Server (optional — better performance)
 
 The extension can offload TTS to a local **kokoro-server** instead of running the model in the browser tab. This eliminates tab memory pressure and produces noticeably faster synthesis.
