@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import os
+import re
 import wave
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -97,6 +98,19 @@ def _is_british(voice: str) -> bool:
     return voice.startswith(("bf_", "bm_"))
 
 
+# Matches Kokoro markup that espeak doesn't understand and would read literally:
+#   [word](/IPA/)        → word   (custom pronunciation)
+#   [word](-1)           → word   (stress level adjustment)
+#   [word](+2)           → word   (stress level adjustment)
+#   ˈ / ˌ               → ''     (inline stress markers)
+_MARKUP_RE = re.compile(r'\[([^\]]+)\]\([^)]+\)|[ˈˌ]')
+
+
+def _strip_markup(text: str) -> str:
+    """Remove Kokoro pronunciation/stress markup so espeak doesn't read it literally."""
+    return _MARKUP_RE.sub(lambda m: m.group(1) if m.group(1) else "", text)
+
+
 def _encode_wav(samples: np.ndarray, sample_rate: int) -> bytes:
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
@@ -147,7 +161,9 @@ async def synthesize(req: SynthesizeRequest):
         if g2p is not None:
             phonemes, _ = g2p(req.text)
             return _kokoro.create(phonemes, voice=req.voice, speed=req.speed, is_phonemes=True)
-        return _kokoro.create(req.text, voice=req.voice, speed=req.speed, lang=lang)
+        # misaki unavailable: strip Kokoro markup so espeak doesn't read brackets/slashes aloud
+        clean = _strip_markup(req.text)
+        return _kokoro.create(clean, voice=req.voice, speed=req.speed, lang=lang)
 
     loop = asyncio.get_event_loop()
     samples, sample_rate = await loop.run_in_executor(_executor, _generate)

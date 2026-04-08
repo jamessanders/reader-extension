@@ -19,11 +19,27 @@ is_python_ok() {
 }
 
 find_python() {
-  local candidates=(python3.13 python3.12 python3.11 python3.10 python3 python)
-  for cmd in "${candidates[@]}"; do
+  # Prefer <=3.12: misaki G2P (full pronunciation markup) requires Python <3.13.
+  # 3.13 still works but strips markup and falls back to plain espeak phonemization.
+  local preferred=(python3.12 python3.11 python3.10)
+  local fallback=(python3.13 python3 python)
+  for cmd in "${preferred[@]}"; do
+    if is_python_ok "$cmd"; then echo "$cmd"; return 0; fi
+  done
+  for cmd in "${fallback[@]}"; do
     if is_python_ok "$cmd"; then
-      echo "$cmd"
-      return 0
+      local ver; ver=$("$cmd" -c 'import sys; print(sys.version_info.minor)')
+      if [ "$ver" -ge 13 ]; then
+        echo "" >&2
+        echo "warning: Python 3.13+ detected. misaki G2P (full pronunciation markup) requires" >&2
+        echo "         Python <=3.12. Install 3.12 for best results:" >&2
+        case "$(uname -s)" in
+          Darwin) echo "           brew install python@3.12 && KOKORO_PYTHON=python3.12 bash start.sh" >&2 ;;
+          Linux)  echo "           sudo apt install python3.12 && KOKORO_PYTHON=python3.12 bash start.sh" >&2 ;;
+        esac
+        echo "" >&2
+      fi
+      echo "$cmd"; return 0
     fi
   done
   return 1
