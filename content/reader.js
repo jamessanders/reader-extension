@@ -11,7 +11,7 @@
   ]);
 
   const MIN_BATCH_WORDS = 10;
-  const MAX_BATCH_WORDS = 25;
+  const MAX_BATCH_WORDS = 50;
   const MAX_BATCH_CHARS = 650;
   const HARD_MAX_CHARS = 1200;
 
@@ -315,7 +315,7 @@
     if (!audioCtx || audioCtx.state === "closed") {
       audioCtx = new AudioContext();
     }
-    if (audioCtx.state === "suspended") {
+    if (audioCtx.state === "suspended" && state !== "paused") {
       audioCtx.resume().catch(() => {});
     }
     return audioCtx;
@@ -389,7 +389,7 @@
     prefetchCache.delete(currentIndex);
     setGenerating(false);
 
-    if (gen !== generation) return;
+    if (gen !== generation || state !== "playing") return;
 
     if (!audioBuffer) {
       currentIndex = batch.endIndex + 1;
@@ -412,18 +412,15 @@
     source.onended = () => {
       if (gen !== generation) return;
       if (currentSource === source) currentSource = null;
+      if (state === "paused") return;
       currentIndex = batch.endIndex + 1;
       if (currentIndex < sentences.length && state === "playing") {
         const crossBlock =
           sentenceNodes[batch.endIndex]?.block !== sentenceNodes[currentIndex]?.block;
-        if (crossBlock) {
-          const g = gen;
-          setTimeout(() => {
-            if (generation === g && state === "playing") speakCurrent();
-          }, 350);
-        } else {
-          speakCurrent();
-        }
+        const g = gen;
+        setTimeout(() => {
+          if (generation === g && state === "playing") speakCurrent();
+        }, crossBlock ? 800 : 200);
       } else {
         stop();
       }
@@ -433,6 +430,17 @@
   }
 
   // ── Playback Controls ──
+
+  function firstVisibleSentenceIndex() {
+    const vh = window.innerHeight;
+    for (let i = 0; i < sentenceNodes.length; i++) {
+      const el = sentenceNodes[i].node.parentElement;
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom > 0 && rect.top < vh) return i;
+    }
+    return 0;
+  }
 
   function play(options = {}) {
     if (options.rate !== undefined) rate = options.rate;
@@ -447,7 +455,7 @@
     buildSentences();
     if (sentences.length === 0) return;
 
-    currentIndex = 0;
+    currentIndex = firstVisibleSentenceIndex();
     state = "playing";
     createToolbar();
     attachClickHandler();
@@ -470,6 +478,8 @@
     state = "playing";
     if (audioCtx && audioCtx.state === "suspended") {
       audioCtx.resume().then(() => {
+        // If the source finished while we were paused, restart from current position.
+        if (!currentSource) speakCurrent();
         updateToolbar();
         broadcastState();
       }).catch(() => {
