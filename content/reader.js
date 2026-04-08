@@ -145,20 +145,22 @@
     }
 
     // When consecutive sentences come from different block elements (e.g. a heading
-    // followed by a paragraph), ensure the first ends with sentence-ending punctuation
-    // so the TTS treats them as distinct sentences rather than running them together.
-    const joined = parts.map((part, j) => {
-      const nextIdx = startIndex + j + 1;
-      if (
-        j < parts.length - 1 &&
-        nextIdx < sentenceNodes.length &&
-        sentenceNodes[startIndex + j].block !== sentenceNodes[nextIdx].block &&
-        !/[.!?…]\s*$/.test(part)
-      ) {
-        return part + ".";
+    // followed by a paragraph), add sentence-ending punctuation and an em-dash pause
+    // marker so the TTS produces a natural section break instead of running them together.
+    let joined = "";
+    for (let j = 0; j < parts.length; j++) {
+      let part = parts[j];
+      if (j < parts.length - 1) {
+        const nextIdx = startIndex + j + 1;
+        const crossBlock =
+          nextIdx < sentenceNodes.length &&
+          sentenceNodes[startIndex + j].block !== sentenceNodes[nextIdx].block;
+        if (crossBlock && !/[.!?…]\s*$/.test(part)) part += ".";
+        joined += part + (crossBlock ? " — " : " ");
+      } else {
+        joined += part;
       }
-      return part;
-    }).join(" ");
+    }
 
     return { text: joined, endIndex: i - 1 };
   }
@@ -412,7 +414,16 @@
       if (currentSource === source) currentSource = null;
       currentIndex = batch.endIndex + 1;
       if (currentIndex < sentences.length && state === "playing") {
-        speakCurrent();
+        const crossBlock =
+          sentenceNodes[batch.endIndex]?.block !== sentenceNodes[currentIndex]?.block;
+        if (crossBlock) {
+          const g = gen;
+          setTimeout(() => {
+            if (generation === g && state === "playing") speakCurrent();
+          }, 350);
+        } else {
+          speakCurrent();
+        }
       } else {
         stop();
       }

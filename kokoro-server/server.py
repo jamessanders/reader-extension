@@ -2,7 +2,6 @@ import asyncio
 import io
 import logging
 import os
-import re
 import wave
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -90,25 +89,13 @@ def _load_g2p():
         log.info("misaki G2P loaded — pronunciation markup enabled.")
         return g2p_us, g2p_gb
     except Exception as e:
-        log.warning("misaki G2P unavailable (%s) — falling back to espeak phonemizer.", e)
+        log.error("misaki G2P unavailable: %s. Synthesis will be disabled until this is resolved.", e)
         return None, None
 
 
 def _is_british(voice: str) -> bool:
     return voice.startswith(("bf_", "bm_"))
 
-
-# Matches Kokoro markup that espeak doesn't understand and would read literally:
-#   [word](/IPA/)        → word   (custom pronunciation)
-#   [word](-1)           → word   (stress level adjustment)
-#   [word](+2)           → word   (stress level adjustment)
-#   ˈ / ˌ               → ''     (inline stress markers)
-_MARKUP_RE = re.compile(r'\[([^\]]+)\]\([^)]+\)|[ˈˌ]')
-
-
-def _strip_markup(text: str) -> str:
-    """Remove Kokoro pronunciation/stress markup so espeak doesn't read it literally."""
-    return _MARKUP_RE.sub(lambda m: m.group(1) if m.group(1) else "", text)
 
 
 def _encode_wav(samples: np.ndarray, sample_rate: int) -> bytes:
@@ -153,17 +140,16 @@ async def synthesize(req: SynthesizeRequest):
     if _kokoro is None:
         raise HTTPException(status_code=503, detail="Model not ready")
 
+    print ("Reading text: ", req.text)
     british = _is_british(req.voice)
-    lang = "en-gb" if british else "en-us"
     g2p = _g2p_gb if british else _g2p_us
 
+    if g2p is None:
+        raise HTTPException(status_code=503, detail="misaki G2P unavailable — check server startup logs for the reason")
+
     def _generate():
-        if g2p is not None:
-            phonemes, _ = g2p(req.text)
-            return _kokoro.create(phonemes, voice=req.voice, speed=req.speed, is_phonemes=True)
-        # misaki unavailable: strip Kokoro markup so espeak doesn't read brackets/slashes aloud
-        clean = _strip_markup(req.text)
-        return _kokoro.create(clean, voice=req.voice, speed=req.speed, lang=lang)
+        phonemes, _ = g2p(req.text)
+        return _kokoro.create(phonemes, voice=req.voice, speed=req.speed, is_phonemes=True)
 
     loop = asyncio.get_event_loop()
     samples, sample_rate = await loop.run_in_executor(_executor, _generate)
