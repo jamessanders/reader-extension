@@ -77,9 +77,16 @@
   const kokoroVoice  = document.getElementById("kokoro-voice");
   const edgeVoice    = document.getElementById("edge-voice");
   const statusEl     = document.getElementById("status");
-  const serviceInput = document.getElementById("service-url");
-  const serviceDot   = document.getElementById("service-dot");
-  const serviceHint  = document.getElementById("service-hint");
+  const serviceInput    = document.getElementById("service-url");
+  const serviceDot      = document.getElementById("service-dot");
+  const serviceHint     = document.getElementById("service-hint");
+  const lmStudioInput   = document.getElementById("lmstudio-url");
+  const lmStudioDot     = document.getElementById("lmstudio-dot");
+  const lmStudioHint    = document.getElementById("lmstudio-hint");
+  const lmStudioEnabled = document.getElementById("lmstudio-enabled");
+  const lmStudioUrlRow  = document.getElementById("lmstudio-url-row");
+
+  const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
 
   const kokoroOnlyEls = document.querySelectorAll(".kokoro-only");
   const edgeOnlyEls   = document.querySelectorAll(".edge-only");
@@ -150,6 +157,46 @@
       }
     } catch {
       setServiceStatus("error", "Unreachable — is the service running?");
+    }
+  }
+
+  function setLmStudioStatus(dotState, hint) {
+    lmStudioDot.className = "service-dot " + dotState;
+    lmStudioHint.textContent = hint;
+  }
+
+  async function checkLmStudio(url) {
+    if (!lmStudioEnabled.checked) {
+      setLmStudioStatus("", "");
+      return;
+    }
+    setLmStudioStatus("checking", "Checking…");
+    try {
+      const res = await fetch(`${url.replace(/\/$/, "")}/v1/models`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = await res.json();
+      const modelCount = body.data?.length ?? 0;
+      if (modelCount > 0) {
+        const modelName = body.data[0].id || "model";
+        setLmStudioStatus("ok", `Connected — ${modelName}`);
+      } else {
+        setLmStudioStatus("warming", "Connected — no model loaded");
+      }
+    } catch {
+      setLmStudioStatus("error", "Unreachable — is LM Studio running?");
+    }
+  }
+
+  function applyLmStudioUI(enabled) {
+    lmStudioUrlRow.style.opacity = enabled ? "" : "0.4";
+    lmStudioInput.disabled = !enabled;
+    if (!enabled) {
+      setLmStudioStatus("", "Disabled — text sent to Kokoro as-is");
+    } else {
+      const url = lmStudioInput.value.trim() || DEFAULT_LMSTUDIO_URL;
+      checkLmStudio(url);
     }
   }
 
@@ -231,9 +278,26 @@
     }, 600);
   });
 
+  let lmStudioCheckTimeout = null;
+
+  lmStudioEnabled.addEventListener("change", () => {
+    const enabled = lmStudioEnabled.checked;
+    browser.storage.local.set({ lmStudioEnabled: enabled });
+    applyLmStudioUI(enabled);
+  });
+
+  lmStudioInput.addEventListener("input", () => {
+    clearTimeout(lmStudioCheckTimeout);
+    const url = lmStudioInput.value.trim() || DEFAULT_LMSTUDIO_URL;
+    lmStudioCheckTimeout = setTimeout(() => {
+      browser.storage.local.set({ lmStudioUrl: url });
+      if (lmStudioEnabled.checked) checkLmStudio(url);
+    }, 600);
+  });
+
   // ── Restore saved settings ──
 
-  browser.storage.local.get(["rate", "voiceName", "edgeVoiceName", "engine", "serviceUrl"])
+  browser.storage.local.get(["rate", "voiceName", "edgeVoiceName", "engine", "serviceUrl", "lmStudioUrl", "lmStudioEnabled"])
     .then((res) => {
       if (res.rate) {
         speedSlider.value = res.rate;
@@ -250,6 +314,12 @@
       const url = res.serviceUrl || DEFAULT_SERVICE_URL;
       serviceInput.value = url === DEFAULT_SERVICE_URL ? "" : url;
       if (eng === "kokoro") checkService(url);
+
+      const lmEnabled = !!res.lmStudioEnabled;
+      lmStudioEnabled.checked = lmEnabled;
+      const lmUrl = res.lmStudioUrl || DEFAULT_LMSTUDIO_URL;
+      lmStudioInput.value = lmUrl === DEFAULT_LMSTUDIO_URL ? "" : lmUrl;
+      if (eng === "kokoro") applyLmStudioUI(lmEnabled);
     });
 
   // Sync playback state with the content script.

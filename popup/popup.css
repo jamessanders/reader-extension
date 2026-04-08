@@ -268,3 +268,57 @@ input[type="text"]::placeholder {
   border-radius: 2px;
   transition: width 0.3s ease;
 }
+
+/* LM Studio preprocessing setting */
+
+.lmstudio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  background: #2d2d4a;
+  border-radius: 9px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #555570;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input[type="checkbox"]:checked + .toggle-track {
+  background: #6366f1;
+}
+
+.toggle input[type="checkbox"]:checked + .toggle-track::after {
+  transform: translateX(14px);
+  background: #fff;
+}

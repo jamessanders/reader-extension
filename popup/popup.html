@@ -61,6 +61,21 @@
       </div>
       <span id="service-hint" class="service-hint">Checking…</span>
     </div>
+
+    <div class="setting kokoro-only" id="lmstudio-setting">
+      <div class="lmstudio-header">
+        <label for="lmstudio-url">LM Studio preprocessing</label>
+        <label class="toggle" title="Reformat text before sending to Kokoro">
+          <input type="checkbox" id="lmstudio-enabled">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="service-row" id="lmstudio-url-row">
+        <input type="text" id="lmstudio-url" placeholder="http://localhost:1234" spellcheck="false">
+        <span id="lmstudio-dot" class="service-dot" title="LM Studio status"></span>
+      </div>
+      <span id="lmstudio-hint" class="service-hint"></span>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>

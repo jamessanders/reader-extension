@@ -252,6 +252,61 @@ async function getServiceUrl() {
   return (res.serviceUrl || DEFAULT_SERVICE_URL).replace(/\/$/, "");
 }
 
+// ── LM Studio preprocessing ──
+
+const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
+
+const KOKORO_PREPROCESS_PROMPT =
+  "You are a text preprocessor for the Kokoro TTS engine. " +
+  "Reformat the input text to improve how it sounds when spoken.\n\n" +
+  "Kokoro supports these formatting features:\n" +
+  "- Custom pronunciation: [word](/IPA/) using IPA notation, e.g. [Kokoro](/kˈOkəɹO/)\n" +
+  "- Intonation via punctuation: ; : , . ! ? — … \" ( )\n" +
+  "- Stress markers: ˈ (primary) and ˌ (secondary) placed immediately before the stressed syllable\n" +
+  "- Lower stress by 1 or 2 levels: [word](-1) or [word](-2)\n" +
+  "- Raise stress by 1 or 2 levels: [word](+1) or [word](+2) — most effective on short, normally unstressed words\n\n" +
+  "Your tasks:\n" +
+  "1. Add pronunciation guides for unusual words, proper nouns, technical terms, and acronyms\n" +
+  "2. Add stress markers where they improve naturalness and clarity\n" +
+  "3. Adjust punctuation to improve sentence rhythm and phrasing\n" +
+  "4. Preserve all original meaning and content exactly\n" +
+  "5. Only add markup where it genuinely helps — do not over-annotate plain prose\n\n" +
+  "Return ONLY the reformatted text with no explanation, preamble, or extra commentary.";
+
+async function preprocessForKokoro(text) {
+  const res = await browser.storage.local.get(["lmStudioUrl", "lmStudioEnabled"]);
+  if (!res.lmStudioEnabled) return text;
+
+  const url = (res.lmStudioUrl || DEFAULT_LMSTUDIO_URL).replace(/\/$/, "");
+
+  try {
+    const response = await fetch(`${url}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "local-model",
+        messages: [
+          { role: "system", content: KOKORO_PREPROCESS_PROMPT },
+          { role: "user", content: text },
+        ],
+        temperature: 0.3,
+        max_tokens: Math.min(Math.max(text.length * 4, 256), 2048),
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!response.ok) return text;
+    const data = await response.json();
+    const processed = data.choices?.[0]?.message?.content?.trim();
+    if (processed) {
+      console.log("[ReadAloud] LM Studio preprocessed text:\n" + processed);
+    }
+    return processed || text;
+  } catch {
+    return text;
+  }
+}
+
 async function synthesizeKokoro(text, voice, rate) {
   const serviceUrl = await getServiceUrl();
 
@@ -300,7 +355,8 @@ browser.runtime.onMessage.addListener((msg) => {
         .catch((err) => ({ error: err.message }));
     }
 
-    return synthesizeKokoro(msg.text, msg.voice ?? "af_heart", msg.rate ?? 1);
+    return preprocessForKokoro(msg.text)
+      .then((processedText) => synthesizeKokoro(processedText, msg.voice ?? "af_heart", msg.rate ?? 1));
   }
 
   if (msg.action === "cancelSynthesis") {

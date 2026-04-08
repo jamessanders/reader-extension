@@ -37,6 +37,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 _kokoro: Kokoro | None = None
+_g2p_us = None  # misaki G2P for American English
+_g2p_gb = None  # misaki G2P for British English
 # Single worker keeps inference serialized; avoids memory spikes from parallel ONNX sessions.
 _executor = ThreadPoolExecutor(max_workers=1)
 
@@ -77,11 +79,22 @@ def _load_model() -> Kokoro:
     return k
 
 
-def _lang_for_voice(voice: str) -> str:
-    """Infer language tag from voice name prefix (bf_/bm_ = British English)."""
-    if voice.startswith(("bf_", "bm_")):
-        return "en-gb"
-    return "en-us"
+def _load_g2p():
+    """Load misaki G2P engines for US and GB English. Returns (g2p_us, g2p_gb) or (None, None)."""
+    try:
+        from misaki import en
+        from misaki.espeak import EspeakFallback
+        g2p_us = en.G2P(trf=False, british=False, fallback=EspeakFallback(british=False))
+        g2p_gb = en.G2P(trf=False, british=True,  fallback=EspeakFallback(british=True))
+        log.info("misaki G2P loaded — pronunciation markup enabled.")
+        return g2p_us, g2p_gb
+    except Exception as e:
+        log.warning("misaki G2P unavailable (%s) — falling back to espeak phonemizer.", e)
+        return None, None
+
+
+def _is_british(voice: str) -> bool:
+    return voice.startswith(("bf_", "bm_"))
 
 
 def _encode_wav(samples: np.ndarray, sample_rate: int) -> bytes:
@@ -97,9 +110,10 @@ def _encode_wav(samples: np.ndarray, sample_rate: int) -> bytes:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    global _kokoro
+    global _kokoro, _g2p_us, _g2p_gb
     loop = asyncio.get_event_loop()
     _kokoro = await loop.run_in_executor(_executor, _load_model)
+    _g2p_us, _g2p_gb = await loop.run_in_executor(None, _load_g2p)
     yield
 
 
@@ -125,9 +139,14 @@ async def synthesize(req: SynthesizeRequest):
     if _kokoro is None:
         raise HTTPException(status_code=503, detail="Model not ready")
 
-    lang = _lang_for_voice(req.voice)
+    british = _is_british(req.voice)
+    lang = "en-gb" if british else "en-us"
+    g2p = _g2p_gb if british else _g2p_us
 
     def _generate():
+        if g2p is not None:
+            phonemes, _ = g2p(req.text)
+            return _kokoro.create(phonemes, voice=req.voice, speed=req.speed, is_phonemes=True)
         return _kokoro.create(req.text, voice=req.voice, speed=req.speed, lang=lang)
 
     loop = asyncio.get_event_loop()
