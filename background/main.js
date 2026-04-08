@@ -254,7 +254,7 @@ async function getServiceUrl() {
 
 // ── LM Studio preprocessing ──
 
-const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
+const DEFAULT_LMSTUDIO_URL = "http://localhost:5425";
 
 const KOKORO_PREPROCESS_PROMPT =
   "You are a text preprocessor for the Kokoro TTS engine. " +
