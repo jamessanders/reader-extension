@@ -60,6 +60,27 @@ docker compose pull && docker compose up -d
 
 ### Python (local)
 
+The easiest way is to use the included startup script, which automatically creates a virtual environment, installs all dependencies, and launches the server:
+
+```bash
+cd kokoro-server
+bash start.sh
+```
+
+Re-running `start.sh` is safe — it skips dependency installation if `requirements.txt` hasn't changed since the last run.
+
+For best pronunciation quality, install `espeak-ng` first (used by misaki for out-of-vocabulary fallback):
+
+```bash
+# macOS
+brew install espeak-ng
+
+# Debian / Ubuntu
+sudo apt install espeak-ng
+```
+
+**Manually** (if you prefer to manage the environment yourself):
+
 ```bash
 cd kokoro-server
 pip install -r requirements.txt
