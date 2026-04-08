@@ -86,7 +86,7 @@
   const lmStudioEnabled = document.getElementById("lmstudio-enabled");
   const lmStudioUrlRow  = document.getElementById("lmstudio-url-row");
 
-  const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
+  const DEFAULT_LMSTUDIO_URL = "http://localhost:5425";
 
   const kokoroOnlyEls = document.querySelectorAll(".kokoro-only");
   const edgeOnlyEls   = document.querySelectorAll(".edge-only");
@@ -185,7 +185,7 @@
         setLmStudioStatus("warming", "Connected — no model loaded");
       }
     } catch {
-      setLmStudioStatus("error", "Unreachable — is LM Studio running?");
+      setLmStudioStatus("error", "Unreachable — is the LLM service running?");
     }
   }
 
