@@ -41,11 +41,34 @@ fi
 
 echo "Python: $($_PY --version)"
 
+# Keep a reference to the system Python so we can check system-level packages
+# later, after the venv is activated and overrides the PATH.
+_SYSTEM_PY="$_PY"
+
 # ── Create venv if missing ─────────────────────────────────────────────────────
+# Set GEMMA_SYSTEM_PACKAGES=1 to create the venv with --system-site-packages,
+# which lets pip-free installs (e.g. dnf install python3-llama-cpp) be seen
+# inside the venv. If the existing venv was created without this flag it will
+# be removed and recreated.
+
+_WANT_SYS_PKGS="${GEMMA_SYSTEM_PACKAGES:-0}"
+
+_venv_has_sys_pkgs() {
+  grep -qi "include-system-site-packages = true" "$VENV_DIR/pyvenv.cfg" 2>/dev/null
+}
 
 if [ ! -d "$VENV_DIR" ]; then
-  echo "Creating virtual environment at .venv …"
-  "$_PY" -m venv "$VENV_DIR"
+  if [ "$_WANT_SYS_PKGS" = "1" ]; then
+    echo "Creating virtual environment (--system-site-packages) at .venv …"
+    "$_PY" -m venv --system-site-packages "$VENV_DIR"
+  else
+    echo "Creating virtual environment at .venv …"
+    "$_PY" -m venv "$VENV_DIR"
+  fi
+elif [ "$_WANT_SYS_PKGS" = "1" ] && ! _venv_has_sys_pkgs; then
+  echo "Recreating venv with --system-site-packages …"
+  rm -rf "$VENV_DIR"
+  "$_PY" -m venv --system-site-packages "$VENV_DIR"
 fi
 
 # shellcheck source=/dev/null
@@ -57,10 +80,25 @@ install_llama_cpp() {
   local os_name; os_name="$(uname -s)"
   local arch;    arch="$(uname -m)"
 
-  # Check if already installed
+  # Check if already installed inside the venv (or via system-site-packages).
   if python -c "import llama_cpp" 2>/dev/null; then
     echo "llama-cpp-python already installed."
     return
+  fi
+
+  # Check if it exists in the system Python but is invisible to the venv.
+  # This happens when the user installed via dnf/apt without GEMMA_SYSTEM_PACKAGES=1.
+  if "$_SYSTEM_PY" -c "import llama_cpp" 2>/dev/null; then
+    echo "" >&2
+    echo "  llama-cpp-python is installed system-wide but is not visible inside" >&2
+    echo "  the virtual environment. Re-run with:" >&2
+    echo "" >&2
+    echo "    GEMMA_SYSTEM_PACKAGES=1 bash start.sh" >&2
+    echo "" >&2
+    echo "  This recreates the venv with --system-site-packages so the" >&2
+    echo "  dnf/apt-installed package is picked up automatically." >&2
+    echo "" >&2
+    exit 1
   fi
 
   echo "Installing llama-cpp-python …"

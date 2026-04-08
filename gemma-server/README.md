@@ -56,6 +56,19 @@ extension popup to `http://localhost:5425`, then enable the preprocessor.
 - ~8 GB free disk space (model download)
 - RAM/VRAM: ~8 GB for Q4_K_M; Metal/CUDA layers are used automatically
 
+## Fedora / system-managed llama-cpp-python
+
+If you installed `llama-cpp-python` via your system package manager (e.g. `dnf`)
+rather than `pip`, the package lives outside the virtual environment and won't be
+found by default. Tell the script to create the venv with `--system-site-packages`:
+
+```bash
+GEMMA_SYSTEM_PACKAGES=1 bash start.sh
+```
+
+This recreates the venv so it can see system-installed Python packages. If the
+venv already exists without this flag it will be removed and rebuilt automatically.
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -66,6 +79,7 @@ extension popup to `http://localhost:5425`, then enable the preprocessor.
 | `MODEL_FILE` | `google_gemma-3-12b-it-Q4_K_M.gguf` | GGUF filename to download |
 | `N_CTX` | `8192` | Context window in tokens |
 | `N_GPU_LAYERS` | `-1` | GPU layers (-1 = all, 0 = CPU only) |
+| `GEMMA_SYSTEM_PACKAGES` | `0` | Set to `1` to use `--system-site-packages` (e.g. for dnf/apt installs) |
 
 ### Using a smaller/larger quantisation
 
