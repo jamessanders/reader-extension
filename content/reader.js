@@ -11,6 +11,7 @@
   ]);
 
   const MIN_BATCH_WORDS = 10;
+  const MIN_BATCH_CHARS = 200;  // keep buffering until this threshold to avoid short audio gaps
   const MAX_BATCH_WORDS = 50;
   const MAX_BATCH_CHARS = 650;
   const HARD_MAX_CHARS = 1200;
@@ -142,6 +143,18 @@
           break;
         }
       }
+    }
+
+    // If the batch is still small, keep pulling in more sentences so the resulting
+    // audio clip is long enough that the next prefetch has time to complete.
+    while (charCount < MIN_BATCH_CHARS && i < sentences.length) {
+      const sentence = sentences[i];
+      const projected = charCount + 1 + sentence.length;
+      if (projected >= HARD_MAX_CHARS) break;
+      parts.push(sentence);
+      wordCount += sentence.trim().split(/\s+/).length;
+      charCount = projected;
+      i++;
     }
 
     // When consecutive sentences come from different block elements (e.g. a heading
