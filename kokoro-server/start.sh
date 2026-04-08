@@ -11,37 +11,48 @@ STAMP_FILE="$VENV_DIR/.requirements_stamp"
 
 # ── Find Python 3.10+ ──────────────────────────────────────────────────────────
 
+is_python_ok() {
+  # Returns 0 if the given command exists, is executable, and is Python 3.10+
+  local cmd="$1"
+  command -v "$cmd" &>/dev/null || return 1
+  "$cmd" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null
+}
+
 find_python() {
   local candidates=(python3.13 python3.12 python3.11 python3.10 python3 python)
   for cmd in "${candidates[@]}"; do
-    if command -v "$cmd" &>/dev/null; then
-      local ok
-      ok=$("$cmd" -c 'import sys; print(int(sys.version_info >= (3, 10)))' 2>/dev/null || echo 0)
-      if [ "$ok" = "1" ]; then
-        echo "$cmd"
-        return 0
-      fi
+    if is_python_ok "$cmd"; then
+      echo "$cmd"
+      return 0
     fi
   done
   return 1
 }
 
-PYTHON="${PYTHON:-}"
-if [ -z "$PYTHON" ]; then
-  PYTHON=$(find_python) || {
+# Allow an override via KOKORO_PYTHON; fall back to auto-detection.
+# (Avoid reusing PYTHON which is commonly set by conda/pyenv to a stale path.)
+if [ -n "${KOKORO_PYTHON:-}" ]; then
+  if ! is_python_ok "$KOKORO_PYTHON"; then
+    echo "error: KOKORO_PYTHON='$KOKORO_PYTHON' is not a working Python 3.10+." >&2
+    exit 1
+  fi
+  _PY="$KOKORO_PYTHON"
+else
+  _PY=$(find_python) || {
     echo "error: Python 3.10 or higher is required but was not found." >&2
     echo "       Install it from https://python.org or via your package manager." >&2
+    echo "       Or set KOKORO_PYTHON=/path/to/python3 and re-run." >&2
     exit 1
   }
 fi
 
-echo "Python: $($PYTHON --version)"
+echo "Python: $($_PY --version)"
 
 # ── Create venv if missing ─────────────────────────────────────────────────────
 
 if [ ! -d "$VENV_DIR" ]; then
   echo "Creating virtual environment at .venv …"
-  "$PYTHON" -m venv "$VENV_DIR"
+  "$_PY" -m venv "$VENV_DIR"
 fi
 
 # shellcheck source=/dev/null
