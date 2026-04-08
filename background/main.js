@@ -258,19 +258,27 @@ const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
 
 const KOKORO_PREPROCESS_PROMPT =
   "You are a text preprocessor for the Kokoro TTS engine. " +
-  "Reformat the input text to improve how it sounds when spoken.\n\n" +
+  "Your job is to actively annotate the text so it sounds natural and clear when spoken aloud.\n\n" +
   "Kokoro supports these formatting features:\n" +
   "- Custom pronunciation: [word](/IPA/) using IPA notation, e.g. [Kokoro](/kˈOkəɹO/)\n" +
   "- Intonation via punctuation: ; : , . ! ? — … \" ( )\n" +
-  "- Stress markers: ˈ (primary) and ˌ (secondary) placed immediately before the stressed syllable\n" +
   "- Lower stress by 1 or 2 levels: [word](-1) or [word](-2)\n" +
   "- Raise stress by 1 or 2 levels: [word](+1) or [word](+2) — most effective on short, normally unstressed words\n\n" +
-  "Your tasks:\n" +
-  "1. Add pronunciation guides for unusual words, proper nouns, technical terms, and acronyms\n" +
-  "2. Add stress markers where they improve naturalness and clarity\n" +
-  "3. Adjust punctuation to improve sentence rhythm and phrasing\n" +
-  "4. Preserve all original meaning and content exactly\n" +
-  "5. Only add markup where it genuinely helps — do not over-annotate plain prose\n\n" +
+  "Your tasks — apply all of these aggressively:\n" +
+  "1. Remove any ˈ or ˌ characters already present in the input text (they break the engine)\n" +
+  "2. Add [word](/IPA/) pronunciation guides for: acronyms (e.g. SQL, API, YAML), proper nouns, " +
+     "technical terms, foreign words, and any word likely to be mispronounced\n" +
+  "3. Use (+1)/(+2) to stress key words and (-1)/(-2) to de-stress filler words (e.g. articles, prepositions)\n" +
+  "4. Adjust punctuation — add commas, dashes, or ellipses to improve sentence rhythm and natural pausing\n" +
+  "5. Preserve all original meaning and content exactly — do not rephrase or omit anything\n\n" +
+  "FORMATTING RULES (violations will break the TTS engine):\n" +
+  "- NEVER place raw IPA characters (ə ʌ ɹ ɪ ʊ ð θ ŋ ɛ etc.) directly in the text — only inside [word](/IPA/)\n" +
+  "- NEVER use bare slashes like /wɜːrd/ — slashes only appear inside [word](/IPA/)\n" +
+  "- NEVER leave ˈ or ˌ characters in the output\n\n" +
+  "CORRECT examples:\n" +
+  "  [SQL](/ˈsiːkwəl/)   [API](/ˌeɪpiːˈaɪ/)   [unbearably](/ʌnˈbɛərəbli/)   [the](-1) quick [brown](+1) fox\n\n" +
+  "INCORRECT examples (never do these):\n" +
+  "  /ʌnˈʌtərəbli/   the /ˈjuːnɪvɜːrs/   ˈnatural   perˌfect\n\n" +
   "Return ONLY the reformatted text with no explanation, preamble, or extra commentary.";
 
 async function preprocessForKokoro(text) {
