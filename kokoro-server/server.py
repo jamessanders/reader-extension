@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import os
+import sys
 import wave
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -16,7 +17,10 @@ from kokoro_onnx import Kokoro
 from pydantic import BaseModel
 
 PORT = int(os.getenv("PORT", "5423"))
-CACHE_DIR = Path(os.getenv("CACHE_DIR", "/app/cache"))
+# When frozen by PyInstaller, __file__ points to a temp extraction dir.
+# Fall back to /app/cache when running inside Docker (CACHE_DIR is set by compose).
+_BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).parent
+CACHE_DIR = Path(os.getenv("CACHE_DIR", _BASE / "cache"))
 # int8 (~88 MB) matches the quality/size tradeoff of the old q8 model; fp16/f32 also available
 MODEL_VARIANT = os.getenv("MODEL_VARIANT", "int8")
 
@@ -83,10 +87,17 @@ def _load_g2p():
     """Load misaki G2P engines for US and GB English. Returns (g2p_us, g2p_gb) or (None, None)."""
     try:
         from misaki import en
-        from misaki.espeak import EspeakFallback
-        g2p_us = en.G2P(trf=False, british=False, fallback=EspeakFallback(british=False))
-        g2p_gb = en.G2P(trf=False, british=True,  fallback=EspeakFallback(british=True))
-        log.info("misaki G2P loaded — pronunciation markup enabled.")
+        if getattr(sys, "frozen", False):
+            # espeak-ng is a system binary and is not available inside a standalone binary.
+            # misaki's built-in lexicon handles the vast majority of English words without it.
+            g2p_us = en.G2P(trf=False, british=False, fallback=None)
+            g2p_gb = en.G2P(trf=False, british=True,  fallback=None)
+            log.info("misaki G2P loaded (no espeak fallback — standalone binary mode).")
+        else:
+            from misaki.espeak import EspeakFallback
+            g2p_us = en.G2P(trf=False, british=False, fallback=EspeakFallback(british=False))
+            g2p_gb = en.G2P(trf=False, british=True,  fallback=EspeakFallback(british=True))
+            log.info("misaki G2P loaded — pronunciation markup enabled.")
         return g2p_us, g2p_gb
     except Exception as e:
         log.error("misaki G2P unavailable: %s. Synthesis will be disabled until this is resolved.", e)

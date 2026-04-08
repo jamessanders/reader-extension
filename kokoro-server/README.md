@@ -4,10 +4,39 @@ A lightweight local HTTP server that runs the [Kokoro](https://github.com/hexgra
 
 Running the model here instead of inside the browser tab eliminates tab memory pressure and produces significantly faster synthesis times. The Python + ONNX runtime stack is meaningfully faster than the previous Node.js/transformers.js setup, particularly on Apple Silicon where the CoreML execution provider is available.
 
+## Pre-built binaries (no Python or Docker required)
+
+Download the latest binary for your platform from the
+[Releases page](https://github.com/jamessanders/reader-extension/releases):
+
+| Platform | Binary |
+|---|---|
+| Linux x86_64 | `kokoro-server-linux-x86_64` |
+| macOS Apple Silicon | `kokoro-server-macos-arm64` |
+| macOS Intel | `kokoro-server-macos-x86_64` |
+
+```bash
+# Example — Linux
+curl -L https://github.com/jamessanders/reader-extension/releases/latest/download/kokoro-server-linux-x86_64 \
+  -o kokoro-server && chmod +x kokoro-server
+
+# Run — model files (~88 MB) download automatically on first run
+./kokoro-server
+```
+
+The model cache is stored next to the binary by default. Override with `CACHE_DIR=/path/to/cache ./kokoro-server`.
+
+> The first launch takes a few extra seconds as the binary self-extracts its runtime to `/tmp`.
+> Subsequent launches reuse the extracted cache and start immediately.
+>
+> Note: the standalone binary uses misaki's built-in pronunciation lexicon without the `espeak-ng`
+> fallback. For best results with unusual proper nouns, use the Docker or Python setup instead.
+
 ## Requirements
 
 - [Docker](https://docs.docker.com/get-docker/) (recommended), **or**
-- Python 3.10+
+- Python 3.10+, **or**
+- Pre-built binary (see above — no dependencies needed)
 
 ## Setup
 

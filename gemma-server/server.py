@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -14,7 +15,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 PORT = int(os.getenv("PORT", "5425"))
-CACHE_DIR = Path(os.getenv("CACHE_DIR", Path(__file__).parent / "cache"))
+# When frozen by PyInstaller, __file__ points to a temp extraction dir.
+# Use the directory containing the binary instead so the cache persists.
+_BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).parent
+CACHE_DIR = Path(os.getenv("CACHE_DIR", _BASE / "cache"))
 # Q4_K_M: ~7.5 GB — good balance of quality and size
 MODEL_REPO = os.getenv("MODEL_REPO", "bartowski/google_gemma-3-12b-it-GGUF")
 MODEL_FILE = os.getenv("MODEL_FILE", "google_gemma-3-12b-it-Q4_K_M.gguf")

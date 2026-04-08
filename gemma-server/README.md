@@ -7,6 +7,32 @@ Built with [llama-cpp-python](https://github.com/abetlen/llama-cpp-python) and
 [FastAPI](https://fastapi.tiangolo.com/). The GGUF model is downloaded
 automatically from HuggingFace on first run (~7.5 GB).
 
+## Pre-built binaries (no Python required)
+
+Download the latest binary for your platform from the
+[Releases page](https://github.com/jamessanders/reader-extension/releases):
+
+| Platform | Binary |
+|---|---|
+| Linux x86_64 | `gemma-server-linux-x86_64` |
+| macOS Apple Silicon | `gemma-server-macos-arm64` |
+| macOS Intel | `gemma-server-macos-x86_64` |
+
+```bash
+# Example — Linux
+curl -L https://github.com/jamessanders/reader-extension/releases/latest/download/gemma-server-linux-x86_64 \
+  -o gemma-server && chmod +x gemma-server
+
+# Run (model downloads on first run if HF_TOKEN is set, or place it manually — see below)
+HF_TOKEN=hf_... ./gemma-server
+```
+
+All the usual environment variables (`CACHE_DIR`, `MODEL_FILE`, `HF_TOKEN`, etc.) work the same way.
+The model cache is stored next to the binary by default.
+
+> The first launch takes a few extra seconds as the binary self-extracts its runtime to `/tmp`.
+> Subsequent launches reuse the extracted cache and start immediately.
+
 ## Quick start
 
 Gemma 3 is a **gated model** — you need to accept Google's license once before
