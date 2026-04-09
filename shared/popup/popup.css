@@ -269,7 +269,31 @@ input[type="text"]::placeholder {
   transition: width 0.3s ease;
 }
 
-/* LM Studio preprocessing setting */
+/* LM Studio / Gemini preprocessing setting */
+
+#llm-provider-row select {
+  width: 100%;
+}
+
+input[type="password"] {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #2d2d4a;
+  background: #16162a;
+  color: #e0e0ec;
+  font-size: 13px;
+  outline: none;
+  min-width: 0;
+}
+
+input[type="password"]:focus {
+  border-color: #6366f1;
+}
+
+input[type="password"]::placeholder {
+  color: #55556a;
+}
 
 .lmstudio-header {
   display: flex;

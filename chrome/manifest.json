@@ -14,6 +14,7 @@
   ],
   "host_permissions": [
     "*://speech.platform.bing.com/*",
+    "*://generativelanguage.googleapis.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],

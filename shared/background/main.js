@@ -309,12 +309,7 @@ const KOKORO_PREPROCESS_PROMPT =
   "INCORRECT: brown (+1)   pilot (+1)   ˈnatural\n\n" +
   "Return ONLY the reformatted text with no explanation, preamble, or extra commentary.";
 
-async function preprocessForKokoro(text) {
-  const res = await browser.storage.local.get(["lmStudioUrl", "lmStudioEnabled"]);
-  if (!res.lmStudioEnabled) return text;
-
-  const url = (res.lmStudioUrl || DEFAULT_LMSTUDIO_URL).replace(/\/$/, "");
-
+async function preprocessWithLmStudio(text, url) {
   try {
     const response = await fetch(`${url}/v1/chat/completions`, {
       method: "POST",
@@ -341,6 +336,54 @@ async function preprocessForKokoro(text) {
   } catch {
     return text;
   }
+}
+
+async function preprocessWithGemini(text, apiKey) {
+  if (!apiKey) return text;
+
+  try {
+    const maxTokens = Math.min(Math.max(text.length * 4, 256), 8192);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: KOKORO_PREPROCESS_PROMPT }] },
+          contents: [{ role: "user", parts: [{ text }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: maxTokens,
+          },
+        }),
+        signal: AbortSignal.timeout(30000),
+      }
+    );
+
+    if (!response.ok) return text;
+    const data = await response.json();
+    const processed = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (processed) {
+      console.log("[ReadAloud] Gemini preprocessed text:\n" + processed);
+    }
+    return processed || text;
+  } catch {
+    return text;
+  }
+}
+
+async function preprocessForKokoro(text) {
+  const res = await browser.storage.local.get(["lmStudioUrl", "lmStudioEnabled", "llmProvider", "geminiApiKey"]);
+  if (!res.lmStudioEnabled) return text;
+
+  const provider = res.llmProvider || "lmstudio";
+
+  if (provider === "gemini") {
+    return preprocessWithGemini(text, res.geminiApiKey || "");
+  }
+
+  const url = (res.lmStudioUrl || DEFAULT_LMSTUDIO_URL).replace(/\/$/, "");
+  return preprocessWithLmStudio(text, url);
 }
 
 async function synthesizeKokoro(text, voice, rate) {

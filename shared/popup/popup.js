@@ -85,6 +85,10 @@
   const lmStudioHint    = document.getElementById("lmstudio-hint");
   const lmStudioEnabled = document.getElementById("lmstudio-enabled");
   const lmStudioUrlRow  = document.getElementById("lmstudio-url-row");
+  const llmProviderRow  = document.getElementById("llm-provider-row");
+  const llmProvider     = document.getElementById("llm-provider");
+  const geminiKeyRow    = document.getElementById("gemini-key-row");
+  const geminiKeyInput  = document.getElementById("gemini-api-key");
 
   const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
 
@@ -189,14 +193,40 @@
     }
   }
 
+  function applyLlmProviderUI(provider) {
+    if (provider === "gemini") {
+      lmStudioUrlRow.classList.add("hidden");
+      geminiKeyRow.classList.remove("hidden");
+    } else {
+      lmStudioUrlRow.classList.remove("hidden");
+      geminiKeyRow.classList.add("hidden");
+    }
+  }
+
   function applyLmStudioUI(enabled) {
-    lmStudioUrlRow.style.opacity = enabled ? "" : "0.4";
-    lmStudioInput.disabled = !enabled;
+    const provider = llmProvider.value;
+    llmProviderRow.style.opacity = enabled ? "" : "0.4";
+    llmProvider.disabled = !enabled;
+
     if (!enabled) {
+      lmStudioUrlRow.style.opacity = "0.4";
+      geminiKeyRow.style.opacity = "0.4";
+      lmStudioInput.disabled = true;
+      geminiKeyInput.disabled = true;
       setLmStudioStatus("", "Disabled — text sent to Kokoro as-is");
     } else {
-      const url = lmStudioInput.value.trim() || DEFAULT_LMSTUDIO_URL;
-      checkLmStudio(url);
+      lmStudioUrlRow.style.opacity = "";
+      geminiKeyRow.style.opacity = "";
+      lmStudioInput.disabled = false;
+      geminiKeyInput.disabled = false;
+
+      if (provider === "gemini") {
+        const hasKey = geminiKeyInput.value.trim().length > 0;
+        setLmStudioStatus(hasKey ? "ok" : "error", hasKey ? "Gemini API key set" : "No API key entered");
+      } else {
+        const url = lmStudioInput.value.trim() || DEFAULT_LMSTUDIO_URL;
+        checkLmStudio(url);
+      }
     }
   }
 
@@ -286,18 +316,37 @@
     applyLmStudioUI(enabled);
   });
 
+  llmProvider.addEventListener("change", () => {
+    const provider = llmProvider.value;
+    browser.storage.local.set({ llmProvider: provider });
+    applyLlmProviderUI(provider);
+    if (lmStudioEnabled.checked) applyLmStudioUI(true);
+  });
+
   lmStudioInput.addEventListener("input", () => {
     clearTimeout(lmStudioCheckTimeout);
     const url = lmStudioInput.value.trim() || DEFAULT_LMSTUDIO_URL;
     lmStudioCheckTimeout = setTimeout(() => {
       browser.storage.local.set({ lmStudioUrl: url });
-      if (lmStudioEnabled.checked) checkLmStudio(url);
+      if (lmStudioEnabled.checked && llmProvider.value === "lmstudio") checkLmStudio(url);
     }, 600);
+  });
+
+  let geminiKeyTimeout = null;
+  geminiKeyInput.addEventListener("input", () => {
+    clearTimeout(geminiKeyTimeout);
+    geminiKeyTimeout = setTimeout(() => {
+      const key = geminiKeyInput.value.trim();
+      browser.storage.local.set({ geminiApiKey: key });
+      if (lmStudioEnabled.checked && llmProvider.value === "gemini") {
+        setLmStudioStatus(key.length > 0 ? "ok" : "error", key.length > 0 ? "Gemini API key set" : "No API key entered");
+      }
+    }, 400);
   });
 
   // ── Restore saved settings ──
 
-  browser.storage.local.get(["rate", "voiceName", "edgeVoiceName", "engine", "serviceUrl", "lmStudioUrl", "lmStudioEnabled"])
+  browser.storage.local.get(["rate", "voiceName", "edgeVoiceName", "engine", "serviceUrl", "lmStudioUrl", "lmStudioEnabled", "llmProvider", "geminiApiKey"])
     .then((res) => {
       if (res.rate) {
         speedSlider.value = res.rate;
@@ -317,8 +366,16 @@
 
       const lmEnabled = !!res.lmStudioEnabled;
       lmStudioEnabled.checked = lmEnabled;
+
+      const provider = res.llmProvider || "lmstudio";
+      llmProvider.value = provider;
+      applyLlmProviderUI(provider);
+
       const lmUrl = res.lmStudioUrl || DEFAULT_LMSTUDIO_URL;
       lmStudioInput.value = lmUrl === DEFAULT_LMSTUDIO_URL ? "" : lmUrl;
+
+      if (res.geminiApiKey) geminiKeyInput.value = res.geminiApiKey;
+
       if (eng === "kokoro") applyLmStudioUI(lmEnabled);
     });
 

@@ -64,15 +64,24 @@
 
     <div class="setting kokoro-only" id="lmstudio-setting">
       <div class="lmstudio-header">
-        <label for="lmstudio-url">LLM preprocessing</label>
+        <label for="lmstudio-enabled">LLM preprocessing</label>
         <label class="toggle" title="Reformat text before sending to Kokoro">
           <input type="checkbox" id="lmstudio-enabled">
           <span class="toggle-track"></span>
         </label>
       </div>
+      <div id="llm-provider-row">
+        <select id="llm-provider">
+          <option value="lmstudio">LM Studio (local)</option>
+          <option value="gemini">Gemini (Google AI)</option>
+        </select>
+      </div>
       <div class="service-row" id="lmstudio-url-row">
         <input type="text" id="lmstudio-url" placeholder="http://localhost:1234" spellcheck="false">
         <span id="lmstudio-dot" class="service-dot" title="LLM service status"></span>
+      </div>
+      <div class="service-row hidden" id="gemini-key-row">
+        <input type="password" id="gemini-api-key" placeholder="Gemini API key" spellcheck="false" autocomplete="off">
       </div>
       <span id="lmstudio-hint" class="service-hint"></span>
     </div>
