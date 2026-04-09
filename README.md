@@ -1,28 +1,67 @@
-# Read Aloud — Firefox Extension
+# Read Aloud — Firefox & Chrome Extension
 
-A Firefox extension that reads webpage text aloud with sentence-by-sentence highlighting, adjustable speed, and voice selection — powered by **Kokoro**, an on-device 82M-parameter neural TTS model that runs entirely in your browser.
+A browser extension that reads webpage text aloud with sentence-by-sentence highlighting, adjustable speed, and voice selection — powered by **Kokoro**, an on-device 82M-parameter neural TTS model, or **Edge TTS** via Microsoft's built-in WebSocket API.
 
 ## Features
 
 - **On-device TTS** using [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) — text never leaves your device
-- **10 high-quality neural voices** — American and British, male and female
+- **Edge TTS** — high-quality cloud voices via the Edge Read Aloud API (no key required)
 - **Sentence highlighting** — the current sentence is highlighted and scrolled into view
 - **Floating toolbar** on the page with play/pause, skip, progress bar, and stop
 - **Popup controls** — play/pause, previous/next sentence, speed slider (0.5×–3×), voice picker
 - **Smart text extraction** — skips nav, footer, scripts, hidden elements; prefers `<article>` or `[role="main"]` content
-- **Persisted settings** — speed and voice selection are remembered across sessions
-- **Model download progress** — a progress bar in the popup shows the one-time ~86 MB model download
+- **Persisted settings** — speed, voice, and engine are remembered across sessions
 
-## First-Run Note
+## Repository Layout
 
-On first use, Kokoro downloads its quantized model weights (~86 MB) from Hugging Face. This is a one-time download — the browser caches it and subsequent uses start instantly. A download progress bar appears in the popup while this happens.
+```
+shared/                  ← source files shared by both extensions
+  browser-compat.js      ← normalizes browser/chrome API across browsers
+  background/main.js     ← TTS engine: Edge TTS WebSocket + Kokoro relay
+  content/reader.js      ← content script: text extraction, playback, toolbar
+  content/reader.css
+  popup/popup.html|js|css
 
-## Installation (Temporary / Development)
+firefox/                 ← Firefox-specific files (Manifest V2)
+  manifest.json
+  background/background.html
+  icons/icon-48.svg  icon-96.svg
 
-1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-2. Click **"Load Temporary Add-on…"**
-3. Select the `manifest.json` file from this directory
-4. The Read Aloud icon will appear in your toolbar
+chrome/                  ← Chrome-specific files (Manifest V3)
+  manifest.json
+  rules.json             ← declarativeNetRequest header rules for Edge TTS
+  background/service-worker.js
+  icons/icon-48.png  icon-96.png
+
+dist/                    ← built output (gitignored — run build.sh to populate)
+  firefox/               ← load this directory in Firefox
+  chrome/                ← load this directory in Chrome
+
+kokoro-server/           ← optional local TTS server (Python + FastAPI)
+build.sh                 ← assembles dist/firefox/ and dist/chrome/
+```
+
+## Building
+
+Run the build script to assemble both extensions into `dist/`:
+
+```bash
+bash build.sh
+```
+
+## Installation (Development)
+
+### Firefox
+
+1. Run `bash build.sh`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **"Load Temporary Add-on…"** and select `dist/firefox/manifest.json`
+
+### Chrome
+
+1. Run `bash build.sh`
+2. Open `chrome://extensions` and enable **Developer mode**
+3. Click **"Load unpacked"** and select the `dist/chrome/` directory
 
 ## Usage
 
@@ -35,6 +74,7 @@ On first use, Kokoro downloads its quantized model weights (~86 MB) from Hugging
    - **Stop** reading entirely
    - **Adjust speed** with the slider
    - **Change voice** from the dropdown
+   - **Switch engine** between Kokoro (local) and Edge TTS (built-in)
 
 ## Quick start — Docker (recommended)
 
@@ -114,4 +154,10 @@ The extension can use any OpenAI-compatible local LLM to preprocess article text
 
 Any model served via LM Studio (or any OpenAI-compatible endpoint) will work. Smaller options like `gemma-3-4b` or `phi-4-mini` use less RAM if the 12B model is too large for your machine.
 
+## Browser Compatibility Notes
 
+| Feature | Firefox (MV2) | Chrome (MV3) |
+|---|---|---|
+| Edge TTS header spoofing | `webRequest` blocking listener | `declarativeNetRequest` static rules |
+| Background context | Persistent background page | Service worker (may be suspended between events) |
+| Icons | SVG supported | PNG required |

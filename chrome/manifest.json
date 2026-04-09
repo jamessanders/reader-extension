@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Read Aloud",
+  "version": "4.0.0",
+  "description": "Read webpage text aloud using Edge TTS or a local Kokoro service, with sentence highlighting.",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "*://speech.platform.bing.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_icon": "icons/icon-48.png",
+    "default_popup": "popup/popup.html",
+    "default_title": "Read Aloud"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["browser-compat.js", "content/reader.js"],
+      "css": ["content/reader.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "edge-tts-headers",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}

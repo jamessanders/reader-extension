@@ -230,18 +230,23 @@ function setHeader(headers, name, value) {
   if (existing) { existing.value = value; } else { headers.push({ name, value }); }
 }
 
-browser.webRequest.onBeforeSendHeaders.addListener(
-  (details) => {
-    const headers = details.requestHeaders || [];
-    setHeader(headers, "Origin", EDGE_ORIGIN);
-    setHeader(headers, "User-Agent", EDGE_UA);
-    setHeader(headers, "Pragma", "no-cache");
-    setHeader(headers, "Cache-Control", "no-cache");
-    return { requestHeaders: headers };
-  },
-  { urls: ["*://speech.platform.bing.com/*"] },
-  ["blocking", "requestHeaders"]
-);
+// MV2 (Firefox): intercept WebSocket upgrade and inject spoofed headers dynamically.
+// MV3 (Chrome): header modification is handled statically via declarativeNetRequest
+// rules in chrome/rules.json — no runtime listener needed.
+if (chrome.runtime.getManifest().manifest_version < 3) {
+  browser.webRequest.onBeforeSendHeaders.addListener(
+    (details) => {
+      const headers = details.requestHeaders || [];
+      setHeader(headers, "Origin", EDGE_ORIGIN);
+      setHeader(headers, "User-Agent", EDGE_UA);
+      setHeader(headers, "Pragma", "no-cache");
+      setHeader(headers, "Cache-Control", "no-cache");
+      return { requestHeaders: headers };
+    },
+    { urls: ["*://speech.platform.bing.com/*"] },
+    ["blocking", "requestHeaders"]
+  );
+}
 
 // ── Kokoro service helpers ──
 
