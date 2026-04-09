@@ -36,23 +36,37 @@ On first use, Kokoro downloads its quantized model weights (~86 MB) from Hugging
    - **Adjust speed** with the slider
    - **Change voice** from the dropdown
 
-## Quick start — both servers
+## Quick start — Docker (recommended)
 
-To start the Kokoro TTS server and the Gemma LLM server together:
+The fastest way to get the kokoro-server running is the interactive setup script:
+
+```bash
+bash setup-docker.sh
+```
+
+It will build the Docker image and start the container. Requires [Docker Desktop](https://docs.docker.com/get-docker/) (or Docker Engine on Linux).
+
+## Quick start — native (no Docker)
+
+To start the kokoro-server directly on your machine without Docker:
 
 ```bash
 bash start.sh
 ```
 
-This launches both in the background and streams their logs to the terminal.
-Press **Ctrl+C** to stop both. Environment variables (`HF_TOKEN`, `MODEL_FILE`, etc.)
-are forwarded to each sub-server as usual.
+This launches the server and streams its logs to the terminal. Press **Ctrl+C** to stop.
 
-## Kokoro Server (optional — better performance)
+## Kokoro Server (optional — better TTS performance)
 
 The extension can offload TTS to a local **kokoro-server** instead of running the model in the browser tab. This eliminates tab memory pressure and produces noticeably faster synthesis.
 
-### Run on your machine
+### Docker — automated setup
+
+```bash
+bash setup-docker.sh   # select kokoro-server when prompted
+```
+
+### Docker — manual
 
 ```bash
 cd kokoro-server
@@ -84,50 +98,20 @@ Then point the extension popup's **Service URL** to `http://<nas-ip>:5423`.
 
 See [`kokoro-server/README.md`](kokoro-server/README.md) for full API docs and configuration options.
 
-## Project Structure
+## LM Studio (optional — LLM text preprocessing)
 
-```
-read-extension/
-├── manifest.json              # Extension manifest (Manifest V2)
-├── background/
-│   ├── background.html        # Background page (loads main.js as an ES module)
-│   └── main.js                # Kokoro TTS engine + message handler
-├── content/
-│   ├── reader.js              # Core: text extraction, audio playback, highlighting
-│   └── reader.css             # Highlight + toolbar styles
-├── popup/
-│   ├── popup.html             # Popup UI
-│   ├── popup.css              # Popup styles
-│   └── popup.js               # Popup logic
-├── kokoro-server/
-│   ├── server.js              # Express TTS service (optional local/NAS backend)
-│   ├── Dockerfile
-│   ├── docker-compose.yml     # Local dev
-│   └── docker-compose.nas.yml # NAS / remote host (pulls pre-built image)
-└── icons/
-    ├── icon-48.svg
-    └── icon-96.svg
-```
+The extension can use any OpenAI-compatible local LLM to preprocess article text before reading. [LM Studio](https://lmstudio.ai) is the recommended way to run one.
 
-## Voices
+### Setup
 
-Grades from [VOICES.md](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md) — ★★★★★ A/A- · ★★★★ B- · ★★★ C+ · ★★ C/C- · ★ D+/D/D-/F+
+1. Download and install [LM Studio](https://lmstudio.ai)
+2. In LM Studio, search for and download **google/gemma-3-12b** (recommended — good balance of quality and speed; the Q4_K_M quantization is ~7.5 GB)
+3. Load the model, then open the **Local Server** tab (the `<->` icon in the left sidebar)
+4. Click **Start Server** — LM Studio serves on `http://localhost:1234` by default
+5. In the extension popup, enable the **LLM preprocessing** toggle and set the URL to `http://localhost:1234`
 
-| Voice | Accent | Gender | Quality |
-|---|---|---|---|
-| Heart | American | Female | ★★★★★ |
-| Bella | American | Female | ★★★★★ |
-| Nicole | American | Female | ★★★★ |
-| Emma | British | Female | ★★★★ |
-| Aoede | American | Female | ★★★ |
-| Kore | American | Female | ★★★ |
-| Sarah | American | Female | ★★★ |
-| Fenrir | American | Male | ★★★ |
-| Michael | American | Male | ★★★ |
-| Puck | American | Male | ★★★ |
-| Alloy | American | Female | ★★ |
-| Nova | American | Female | ★★ |
-| Sky | American | Female | ★★ |
-| Isabella | British | Female | ★★ |
-| Fable | British | Male | ★★ |
-| George | British | Male | ★★ |
+### Alternative models
+
+Any model served via LM Studio (or any OpenAI-compatible endpoint) will work. Smaller options like `gemma-3-4b` or `phi-4-mini` use less RAM if the 12B model is too large for your machine.
+
+

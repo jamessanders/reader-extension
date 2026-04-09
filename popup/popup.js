@@ -86,7 +86,7 @@
   const lmStudioEnabled = document.getElementById("lmstudio-enabled");
   const lmStudioUrlRow  = document.getElementById("lmstudio-url-row");
 
-  const DEFAULT_LMSTUDIO_URL = "http://localhost:5425";
+  const DEFAULT_LMSTUDIO_URL = "http://localhost:1234";
 
   const kokoroOnlyEls = document.querySelectorAll(".kokoro-only");
   const edgeOnlyEls   = document.querySelectorAll(".edge-only");

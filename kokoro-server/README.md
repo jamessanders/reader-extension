@@ -40,7 +40,17 @@ The model cache is stored next to the binary by default. Override with `CACHE_DI
 
 ## Setup
 
-### Docker — local machine (recommended)
+### Docker — automated setup script (recommended)
+
+From the repository root, run the interactive setup script:
+
+```bash
+bash setup-docker.sh
+```
+
+Select **kokoro-server** when prompted. The script checks that Docker is running, asks for the host port (default `5423`), builds the image, and starts the container.
+
+### Docker — local machine (manual)
 
 ```bash
 cd kokoro-server
